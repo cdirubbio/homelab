@@ -58,35 +58,41 @@ data:
 
     endpoints:
       - name: Docmost
-        url: https://docmost.dirubbio.com./login
+        url: http://docmost.default.svc.cluster.local.:3000
         interval: 60s
         conditions:
           - "[STATUS] == 200"
+
+      - name: Glance
+        url: http://glance.default.svc.cluster.local.:8080
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
       - name: Nginx Proxy Manager
         url: https://npm.chrdir.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
+
       - name: Proxmox VE PVE
         url: https://pve.chrdir.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
+
       - name: Proxmox VE PVEN
         url: https://pven.chrdir.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
+
       - name: Longhorn
         url: https://longhorn.chrdir.com./#/dashboard
         interval: 60s
         conditions:
           - "[STATUS] == 200"
-      - name: Glance
-        url: https://glance.dirubbio.com.
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
+          
       - name: Anaphora
         url: https://anaphora.sh.
         interval: 60s
