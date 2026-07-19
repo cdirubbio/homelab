@@ -4,6 +4,8 @@ kind: StatefulSet
 metadata:
   name: docmost
   namespace: default
+  labels:
+    tmp: label
 spec:
   serviceName: docmost
   replicas: 1
