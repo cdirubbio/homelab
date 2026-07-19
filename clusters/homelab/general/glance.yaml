@@ -1,0 +1,141 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glance
+  template:
+    metadata:
+      labels:
+        app: glance
+    spec:
+      containers:
+        - name: glance
+          image: glanceapp/glance:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: glance-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance
+spec:
+  selector:
+    app: glance
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30750
+  type: NodePort
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+data:
+  glance.yml: |
+    pages:
+      - name: Home
+        hide-desktop-navigation: true
+        columns:
+          - size: small
+            widgets:
+              - type: calendar
+                first-day-of-week: monday
+          - size: full
+            widgets:
+              - type: bookmarks
+                groups:
+                  - title: Infrastructure
+                    links:
+                      - title: Proxmox
+                        url: https://pve.chrdir.com
+                        icon: si:proxmox
+
+                      - title: Gatus
+                        url: https://gatus.chrdir.com
+                        icon: si:statuspal
+                      - title: Nginx Proxy Manager
+                        url: https://npm.chrdir.com
+                        icon: si:nginxproxymanager
+                  
+                  - title: Kubernetes
+                    links:
+                      - title: Kubernetes Dashboard
+                        url: https://k8s.dirubbio.com
+                        icon: si:kubernetes
+                      - title: Grafana
+                        url: https://grafana.dirubbio.com
+                        icon: si:grafana
+                      - title: Longhorn
+                        url: https://longhorn.chrdir.com
+                        icon: si:longhorn
+
+                  - title: Applications
+                    links:
+                      - title: Docmost
+                        url: https://docmost.dirubbio.com
+                        icon: si:readthedocs
+
+                      - title: OwnCloud
+                        url: https://owncloud.dirubbio.com
+                        icon: si:owncloud
+
+                      - title: Glance
+                        url: https://glance.dirubbio.com
+                        icon: si:glance
+
+              - type: group
+                widgets:
+                  - type: hacker-news
+                  - type: lobsters
+
+              - type: videos
+                channels:
+                  - UCHnyfMqiRRG1u-2MsSQLbXA # Veritasium
+
+          - size: small
+            widgets:
+              - type: weather
+                location: New York, New York
+                units: imperial
+                hour-format: 12h
+
+              - type: markets
+                markets:
+                  - symbol: SPY
+                    name: S&P 500
+
+                  - symbol: CRWV
+                    name: CoreWeave
+
+                  - symbol: NVDA
+                    name: NVIDIA
+
+                  - symbol: AAPL
+                    name: Apple
+
+                  - symbol: AMZN
+                    name: Amazon
+
+              - type: releases
+                cache: 1d
+                repositories:
+                  - aws/amazon-vpc-cni-k8s
+                  - aws/aws-network-policy-agent
+                  - aws/amazon-network-policy-controller-k8s
+---

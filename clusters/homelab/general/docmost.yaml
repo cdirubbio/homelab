@@ -1,0 +1,148 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: docmost
+spec:
+  serviceName: docmost
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docmost
+  template:
+    metadata:
+      labels:
+        app: docmost
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:18
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 5432
+        env:
+          - name: POSTGRES_DB
+            value: docmost
+          - name: POSTGRES_USER
+            value: docmost
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: POSTGRES_PASSWORD
+        volumeMounts:
+          - name: postgres-storage
+            mountPath: /var/lib/postgresql
+      - name: redis
+        image: redis:8
+        imagePullPolicy: IfNotPresent
+        command:
+          - redis-server
+          - --appendonly
+          - "yes"
+          - --maxmemory-policy
+          - noeviction
+        ports:
+          - containerPort: 6379
+        volumeMounts:
+          - name: redis-storage
+            mountPath: /data
+      - name: docmost
+        image: docmost/docmost:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 3000
+        env:
+          - name: APP_URL
+            value: "https://docmost.dirubbio.com"
+          - name: STORAGE_DRIVER
+            value: "s3"
+          - name: AWS_S3_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: AWS_ACCESS_KEY_ID
+          - name: AWS_S3_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: AWS_SECRET_ACCESS_KEY
+          - name: AWS_S3_REGION
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: AWS_S3_REGION
+          - name: AWS_S3_BUCKET
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: AWS_S3_BUCKET
+          - name: APP_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: APP_SECRET
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: docmost-secret
+                key: DATABASE_URL
+          - name: REDIS_URL
+            value: "redis://localhost:6379"
+        volumeMounts:
+          - name: docmost-storage
+            mountPath: /app/data/storage
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
+    - metadata:
+        name: redis-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
+    - metadata:
+        name: docmost-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docmost
+spec:
+  selector:
+    app: docmost
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30250
+---

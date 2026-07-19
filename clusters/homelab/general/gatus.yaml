@@ -1,0 +1,91 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gatus
+  template:
+    metadata:
+      labels:
+        app: gatus
+    spec:
+      dnsConfig:
+        nameservers:
+          - 8.8.8.8
+      hostNetwork: true
+      containers:
+        - name: gatus
+          image: twinproduction/gatus:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: gatus-config
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: gatus-config
+          configMap:
+            name: gatus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatus
+spec:
+  selector:
+    app: gatus
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+data:
+  config.yaml: |
+    storage:
+      type: memory
+
+    endpoints:
+      - name: Docmost
+        url: https://docmost.dirubbio.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Nginx Proxy Manager
+        url: https://npm.chrdir.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Proxmox VE PVE
+        url: https://pve.chrdir.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Proxmox VE PVEN
+        url: https://pven.chrdir.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Longhorn
+        url: https://longhorn.chrdir.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Glance
+        url: https://home.dirubbio.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+      - name: Anaphora
+        url: https://anaphora.sh.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+---

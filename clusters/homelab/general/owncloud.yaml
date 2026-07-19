@@ -1,0 +1,212 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: owncloud-config
+data:
+  OWNCLOUD_DOMAIN: owncloud.chrdir.com
+  OWNCLOUD_TRUSTED_DOMAINS: owncloud.chrdir.com,owncloud.dirubbio.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: owncloud
+spec:
+  type: NodePort
+  selector:
+    app: owncloud
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      nodePort: 30500
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: owncloud
+spec:
+  serviceName: owncloud
+  replicas: 1
+  selector:
+    matchLabels:
+      app: owncloud
+  template:
+    metadata:
+      labels:
+        app: owncloud
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mariadb
+          image: mariadb:10.11
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--max-allowed-packet=128M"
+            - "--innodb-log-file-size=64M"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secret
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              value: owncloud
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secret
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              value: owncloud
+            - name: MARIADB_AUTO_UPGRADE
+              value: "1"
+          ports:
+            - containerPort: 3306
+              name: mysql
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD"
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD"
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--databases"
+            - "1"
+          ports:
+            - containerPort: 6379
+              name: redis
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+        - name: owncloud
+          image: owncloud/server:10.15
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: OWNCLOUD_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: owncloud-config
+                  key: OWNCLOUD_DOMAIN
+            - name: OWNCLOUD_TRUSTED_DOMAINS
+              valueFrom:
+                configMapKeyRef:
+                  name: owncloud-config
+                  key: OWNCLOUD_TRUSTED_DOMAINS
+            - name: OWNCLOUD_DB_TYPE
+              value: mysql
+            - name: OWNCLOUD_DB_NAME
+              value: owncloud
+            - name: OWNCLOUD_DB_USERNAME
+              value: owncloud
+            - name: OWNCLOUD_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secret
+                  key: mysql-password
+            - name: OWNCLOUD_DB_HOST
+              value: 127.0.0.1
+            - name: OWNCLOUD_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secret
+                  key: admin-username
+            - name: OWNCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: owncloud-secret
+                  key: admin-password
+            - name: OWNCLOUD_MYSQL_UTF8MB4
+              value: "true"
+            - name: OWNCLOUD_REDIS_ENABLED
+              value: "true"
+            - name: OWNCLOUD_REDIS_HOST
+              value: localhost
+          ports:
+            - containerPort: 8080
+              name: http
+          startupProbe:
+            exec:
+              command:
+                - /usr/bin/healthcheck
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /usr/bin/healthcheck
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          livenessProbe:
+            exec:
+              command:
+                - /usr/bin/healthcheck
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: owncloud-data
+              mountPath: /mnt/data
+  volumeClaimTemplates:
+    - metadata:
+        name: owncloud-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Gi
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+---
