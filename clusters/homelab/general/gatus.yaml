@@ -58,7 +58,7 @@ data:
 
     endpoints:
       - name: Docmost
-        url: https://docmost.dirubbio.com.
+        url: https://docmost.dirubbio.com./login
         interval: 60s
         conditions:
           - "[STATUS] == 200"
@@ -78,12 +78,12 @@ data:
         conditions:
           - "[STATUS] == 200"
       - name: Longhorn
-        url: https://longhorn.chrdir.com.
+        url: https://longhorn.chrdir.com./#/dashboard
         interval: 60s
         conditions:
           - "[STATUS] == 200"
       - name: Glance
-        url: https://home.dirubbio.com.
+        url: https://glance.dirubbio.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
