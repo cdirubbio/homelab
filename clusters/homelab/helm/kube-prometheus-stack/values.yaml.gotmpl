@@ -1,0 +1,54 @@
+# Disable Alertmanager to save memory
+alertmanager:
+  enabled: false
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: false
+  persistence:
+    accessModes:
+    - ReadWriteOnce
+    enabled: true
+    finalizers:
+    - kubernetes.io/pvc-protection
+    size: 10Gi
+    storageClassName: longhorn
+    type: sts
+  service:
+    nodePort: 31000
+    type: NodePort
+
+
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 2d 
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+
+
+defaultRules:
+  create: false
+
+kubeApiServer:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+coreDns:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: false
+

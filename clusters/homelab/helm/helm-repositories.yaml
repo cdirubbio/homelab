@@ -1,0 +1,43 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    semver: "1.19.x"
+  url: oci://quay.io/cilium/charts/cilium
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kro
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    semver: "v0.9.x"
+  url: oci://registry.k8s.io/kro/charts/kro
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    semver: "87.x"
+  url: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: longhorn
+  namespace: flux-system
+spec:
+  interval: 10m
+  url:  https://charts.longhorn.io
