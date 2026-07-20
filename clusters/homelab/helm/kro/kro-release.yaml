@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: kro
   namespace: flux-system
+  labels:
+    tmp: lable
 spec:
   targetNamespace: kro-system
   releaseName: kro
