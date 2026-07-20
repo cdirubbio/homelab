@@ -61,13 +61,13 @@ data:
         url: http://docmost.dirubbio.com
         interval: 60s
         conditions:
-          - "[STATUS] == 404"
+          - "[STATUS] == 200"
 
       - name: Glance
         url: http://glance.dirubbio.com
         interval: 60s
         conditions:
-          - "[STATUS] == 404"
+          - "[STATUS] == 200"
 
       - name: Nginx Proxy Manager
         url: https://npm.chrdir.com.
