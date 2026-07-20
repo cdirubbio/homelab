@@ -58,16 +58,16 @@ data:
 
     endpoints:
       - name: Docmost
-        url: http://docmost.default.svc.cluster.local.:3000
+        url: http://docmost.dirubbio.com
         interval: 60s
         conditions:
-          - "[STATUS] == 200"
+          - "[STATUS] == 404"
 
       - name: Glance
-        url: http://glance.default.svc.cluster.local.:8080
+        url: http://glance.dirubbio.com
         interval: 60s
         conditions:
-          - "[STATUS] == 200"
+          - "[STATUS] == 404"
 
       - name: Nginx Proxy Manager
         url: https://npm.chrdir.com.
@@ -92,7 +92,7 @@ data:
         interval: 60s
         conditions:
           - "[STATUS] == 200"
-          
+
       - name: Anaphora
         url: https://anaphora.sh.
         interval: 60s
