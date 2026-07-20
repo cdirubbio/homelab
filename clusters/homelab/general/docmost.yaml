@@ -4,6 +4,8 @@ kind: StatefulSet
 metadata:
   name: docmost
   namespace: default
+  finalizers:
+    - deletion.chrdir.com/prevent
 spec:
   serviceName: docmost
   replicas: 1
