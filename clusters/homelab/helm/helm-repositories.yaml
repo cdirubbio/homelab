@@ -1,6 +1,17 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    semver: "41.0.x"
+  url: oci://ghcr.io/traefik/helm/traefik
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
   name: cilium
   namespace: flux-system
 spec:
