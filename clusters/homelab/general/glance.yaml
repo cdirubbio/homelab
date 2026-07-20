@@ -28,7 +28,6 @@ spec:
         - name: config
           configMap:
             name: glance-config
-
 ---
 apiVersion: v1
 kind: Service

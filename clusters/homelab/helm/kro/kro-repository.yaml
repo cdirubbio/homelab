@@ -1,0 +1,10 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: kro
+  namespace: flux-system
+spec:
+  interval: 10m
+  ref:
+    semver: "v0.9.x"
+  url: oci://registry.k8s.io/kro/charts/kro
