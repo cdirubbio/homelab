@@ -14,6 +14,5 @@ spec:
   install:
     createNamespace: true
   values: 
-    kubeProxyReplacement: true
     k8sServiceHost: 192.168.1.186
     k8sServicePort: 6443
