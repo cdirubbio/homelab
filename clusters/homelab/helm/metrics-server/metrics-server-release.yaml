@@ -18,3 +18,4 @@ spec:
   values:
     hostNetwork:
       enabled: true
+    containerPort: 4443
