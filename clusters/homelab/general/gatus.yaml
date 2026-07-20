@@ -58,19 +58,19 @@ data:
 
     endpoints:
       - name: Docmost
-        url: http://docmost.dirubbio.com
+        url: https://docmost
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
       - name: Glance
-        url: http://glance.dirubbio.com
+        url: https://glance.dirubbio.com
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
       - name: Grafana
-        url: http://grafana.dirubbio.com
+        url: https://grafana.dirubbio.com
         interval: 60s
         conditions:
           - "[STATUS] == 200"
