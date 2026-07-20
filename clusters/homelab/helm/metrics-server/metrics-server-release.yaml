@@ -15,6 +15,3 @@ spec:
         name: metrics-server
         namespace: flux-system
   targetNamespace: kube-system
-  values:
-    hostNetwork:
-      enabled: true
