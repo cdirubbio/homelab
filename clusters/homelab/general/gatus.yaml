@@ -17,7 +17,7 @@ spec:
       dnsConfig:
         nameservers:
           - 8.8.8.8
-      hostNetwork: true
+      # hostNetwork: true
       containers:
         - name: gatus
           image: twinproduction/gatus:latest
