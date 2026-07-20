@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: metrics-server
   namespace: flux-system
+  labels:
+    temp: label
 spec:
   releaseName: metrics-server
   interval: 30m
