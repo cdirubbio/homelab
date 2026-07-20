@@ -69,6 +69,12 @@ data:
         conditions:
           - "[STATUS] == 200"
 
+      - name: Grafana
+        url: http://grafana.dirubbio.com
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
       - name: Nginx Proxy Manager
         url: https://npm.chrdir.com.
         interval: 60s
