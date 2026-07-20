@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: longhorn
   namespace: flux-system
+  labels:
+    tmp: label
 spec:
   releaseName: longhorn
   interval: 30m
