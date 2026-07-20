@@ -58,19 +58,19 @@ data:
 
     endpoints:
       - name: Docmost
-        url: https://docmost
+        url: http://docmos.default.svc.clusterl.local:3000
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
       - name: Glance
-        url: https://glance.dirubbio.com
+        url: http://glance.default.svc.clusterl.local:8080
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
       - name: Grafana
-        url: https://grafana.dirubbio.com
+        url: http://grafana.monitoring.svc.clusterl.local:9090
         interval: 60s
         conditions:
           - "[STATUS] == 200"
