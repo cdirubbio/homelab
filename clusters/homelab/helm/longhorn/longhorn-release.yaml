@@ -17,3 +17,6 @@ spec:
   targetNamespace: longhorn-system
   install:
     createNamespace: true
+  values: 
+    longhornUI:
+      replicas: 1
