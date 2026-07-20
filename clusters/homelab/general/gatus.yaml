@@ -58,7 +58,7 @@ data:
 
     endpoints:
       - name: Docmost
-        url: http://docmos.default.svc.cluster.local:3000
+        url: http://docmost.default.svc.cluster.local:3000
         interval: 60s
         conditions:
           - "[STATUS] == 200"
@@ -70,7 +70,7 @@ data:
           - "[STATUS] == 200"
 
       - name: Grafana
-        url: http://grafana.monitoring.svc.cluster.local:9090
+        url: http://kps-grafana.monitoring.svc.cluster.local
         interval: 60s
         conditions:
           - "[STATUS] == 200"
