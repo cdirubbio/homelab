@@ -51,6 +51,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: secondary
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
