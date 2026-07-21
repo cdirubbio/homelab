@@ -56,19 +56,6 @@ spec:
     secretRef:
       name: sops-age
 ---
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: secrets
-  namespace: flux-system
-spec:
-  interval: 1m0s
-  url: https://github.com/cdirubbio-cicd/secrets
-  ref:
-    branch: main
-  secretRef:
-    name: flux-system
----
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -76,11 +63,11 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  path: ./clusters/homelab
+  path: ./secrets/homelab
   prune: true
   sourceRef:
     kind: GitRepository
-    name: secrets
+    name: secondary
   decryption:
     provider: sops
     secretRef:
