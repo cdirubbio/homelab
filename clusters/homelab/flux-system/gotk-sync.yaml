@@ -62,10 +62,6 @@ spec:
   url: https://github.com/cdirubbio-cicd/secrets
   ref:
     branch: main
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -79,3 +75,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: secrets
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
