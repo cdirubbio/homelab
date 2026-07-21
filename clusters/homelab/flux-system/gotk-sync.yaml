@@ -51,3 +51,20 @@ spec:
   sourceRef:
     kind: GitRepository
     name: secondary
+---
+# created: 2026-07-20T19:02:11-07:00
+# public key: age10wyvd2z6n4m37m8lh6ejn03npr0k2pswejgwy2ltr3prd8p0hd3qe07yp2
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  url: https://github.com/cdirubbio-cicd/secrets
+  ref:
+    branch: main
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
