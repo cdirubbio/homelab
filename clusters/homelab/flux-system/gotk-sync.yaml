@@ -62,6 +62,8 @@ spec:
   url: https://github.com/cdirubbio-cicd/secrets
   ref:
     branch: main
+  secretRef:
+    name: flux-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
