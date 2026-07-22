@@ -11,12 +11,8 @@ spec:
     name: cilium
     namespace: flux-system
   interval: 10m
-  install:
-    createNamespace: true
   values: 
     k8sServiceHost: 192.168.1.186
     k8sServicePort: 6443
     operator:
       replicas: 1
-    routingMode: tunnel
-    tunnelProtocol: vxlan
