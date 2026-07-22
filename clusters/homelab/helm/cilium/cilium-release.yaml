@@ -4,7 +4,7 @@ metadata:
   name: cilium
   namespace: flux-system
 spec:
-  targetNamespace: cilium
+  targetNamespace: kube-system
   releaseName: cilium
   chartRef:
     kind: OCIRepository
