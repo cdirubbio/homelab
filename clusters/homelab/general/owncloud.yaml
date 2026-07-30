@@ -30,7 +30,7 @@ metadata:
   namespace: default
 spec:
   serviceName: owncloud
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: owncloud
