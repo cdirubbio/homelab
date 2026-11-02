@@ -76,6 +76,39 @@ source_for() {
   done
 }
 
+# go_bumps <repo> <tag>...: "module@vX" for every Go module finding (any
+# severity) that has a fixedInVersion, read fresh from the scan each run.
+# Per module: the highest fixing version across its CVEs (the lowest version
+# that fixes all of them), and only if it is newer than what is compiled in.
+go_bumps() {
+  repo=$1; shift
+  for t in "$@"; do
+    aws ecr describe-image-scan-findings --repository-name "$repo" --image-id imageTag="$t" \
+      --output json 2>/dev/null | jq -r '
+        .imageScanFindings.enhancedFindings[]?.packageVulnerabilityDetails.vulnerablePackages[]?
+        | select(.packageManager == "GO")
+        | select((.fixedInVersion // "NotAvailable") != "NotAvailable")
+        | "\(.name) \(.version) \(.fixedInVersion | gsub(" "; ""))"' || true
+  done | while read -r mod have fixes; do
+    for f in $(echo "$fixes" | tr ',' ' '); do
+      f=v${f#v}; have=v${have#v}
+      # only real releases: skip pre-release / pseudo-versions (v1.2.3-dev.0.2026...)
+      case "$f" in *-*) log "  skip $mod $f (pre-release fix version)"; continue;; esac
+      # skip fixes on an older release line than what is compiled in
+      if [ "$(printf '%s\n%s\n' "$have" "$f" | sort -V | tail -1)" = "$f" ] && [ "$f" != "$have" ]; then
+        echo "$mod $f"
+      fi
+    done
+  done | sort -k1,1 -k2,2V | {
+    last=""; lastv=""
+    while read -r mod v; do
+      if [ -n "$last" ] && [ "$mod" != "$last" ]; then printf '%s@%s ' "$last" "$lastv"; fi
+      last=$mod; lastv=$v
+    done
+    if [ -n "$last" ]; then printf '%s@%s ' "$last" "$lastv"; fi
+  }
+}
+
 plan_build() {
   arch=$1; tools; mkdir -p "$WORK"; : > "$WORK/plan"; now=$(date +%s)
   for repo in $(repos); do
@@ -117,10 +150,21 @@ plan_build() {
           set -- $src; git=$1 ref=$2 pkg=$3 bin=$4 xflag=$5 newbase=$6
           if [ "$xflag" = - ]; then ld="-s -w"; else ld="-s -w -X $xflag"; fi
           if [ "$newbase" != keep ]; then from=$newbase; fi
+          # Go module fixes from the current image and the newest attempt
+          scanned="${CUR}_$arch"
+          if [ "$K" -gt "$M" ] && has /tmp/tags "$base-patch.${K}_$arch"; then scanned="$scanned $base-patch.${K}_$arch"; fi
+          # shellcheck disable=SC2086
+          bumps=$(go_bumps "$repo" $scanned)
           how="OS packages + $bin rebuilt from $git@$ref with ${GO_IMAGE##*:}"
           echo "FROM $GO_IMAGE AS build"
           echo "RUN git init -q /src && cd /src && git remote add origin $git \\"
           echo "    && git fetch -q --depth 1 origin $ref && git checkout -q FETCH_HEAD"
+          if [ -n "$bumps" ]; then
+            how="$how, go get ${bumps% }"
+            # module mode (not vendor/workspace) so the bumped versions are used
+            echo "ENV GOWORK=off GOFLAGS=-mod=mod"
+            echo "RUN cd /src && go get ${bumps% }"
+          fi
           echo "RUN cd /src && CGO_ENABLED=0 go build -trimpath -ldflags \"$ld\" -o /out$bin $pkg"
         fi
         echo "FROM $from"

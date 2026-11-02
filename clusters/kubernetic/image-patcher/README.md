@@ -28,6 +28,15 @@ image, e.g. to move cyclonus off end-of-life Alpine 3.13. Building natively on
 each arch also yields real arm64 binaries. Bump `GO_IMAGE` in `patch.sh` when a
 newer Go fixes new stdlib CVEs.
 
+Go dependencies: for those same images, every Go module finding (any
+severity) with a `fixedInVersion` becomes a `go get module@vX` before the
+build, read from the scan on every run, so new CVEs get new bumps without any
+config change. Per module it uses the highest fixing version across its CVEs
+(the lowest version that fixes all of them), never a downgrade, and never a
+pre-release/pseudo-version. Builds then run in module mode (`GOWORK=off
+GOFLAGS=-mod=mod`). A bump that breaks the build fails that arch's patch and is
+visible in the build log.
+
 To force a new `-patch.N` now (instead of waiting for a blocked one to age out):
 
 ```sh
