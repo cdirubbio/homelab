@@ -139,9 +139,19 @@ plan_build() {
         N=$((K + 1))
       fi
       name=$(echo "$repo-$base-$N" | tr '/:' '--')
-      cfg=$(image_config "$repo" "${base}_$arch")
-      user=$(printf '%s\n' "$cfg" | jq -r '.config.User // ""')
       src=$(source_for "${repo#"$PREFIX"/}" "$base")
+      # The mirrored image may not exist for this arch (upstream is amd64-only).
+      # That's fine when the binary is rebuilt from source onto a fresh base;
+      # otherwise there is nothing to patch for this arch.
+      cfgtag="${base}_$arch"
+      if ! has /tmp/tags "$cfgtag"; then
+        case "$src" in
+          ''|*' keep') log "skip  $id: no ${base}_$arch mirrored and no source rebuild onto a new base"; continue;;
+        esac
+        for a in $ARCHES; do if has /tmp/tags "${base}_$a"; then cfgtag="${base}_$a"; break; fi; done
+      fi
+      cfg=$(image_config "$repo" "$cfgtag")
+      user=$(printf '%s\n' "$cfg" | jq -r '.config.User // ""')
       from="$REG/$repo:${base}_$arch"; how="OS packages"
       mkdir -p "$WORK/$name"
       {
