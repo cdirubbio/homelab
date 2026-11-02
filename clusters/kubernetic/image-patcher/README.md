@@ -6,7 +6,7 @@ Automatic CVE patch rebuilds for the `poc-e2e/*` images published by
 | CronJob | When (UTC) | Does |
 |---|---|---|
 | `image-patch-amd64` | daily 03:17 | For each `<base>` whose current version has critical findings, rebuild `<base>_amd64` with upgraded OS packages and push `<base>-patch.N_amd64` |
-| `image-patch-arm64` | daily 03:17 | Same on the `arm64` NodePool (`../nodepools/arm64.yaml`) |
+| `image-patch-arm64` | daily 03:17 | Same on arm64 nodes (`standard` NodePool, `../nodepools/standard.yaml`) |
 | `image-patch-index` | daily 05:17 | When both `<base>-patch.N_<arch>` children exist and scan with 0 criticals, publish the `<base>-patch.N` index |
 
 "Current version" = the highest published `<base>-patch.N` index, otherwise

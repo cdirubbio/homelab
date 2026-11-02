@@ -82,8 +82,6 @@ spec:
           restartPolicy: Never
           nodeSelector:
             kubernetes.io/arch: arm64
-          tolerations:
-            - {key: arch, operator: Equal, value: arm64, effect: NoSchedule}
           initContainers:
             - name: plan
               image: public.ecr.aws/amazonlinux/amazonlinux:2023.12.20261102.0
