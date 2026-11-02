@@ -4,8 +4,8 @@
 # State lives entirely in ECR tags:
 #   <base>                 mirrored version (index), children <base>_<arch>
 #   <base>-patch.N_<arch>  patched child built by the per-arch CronJobs
-#   <base>-patch.N         index, created by the index CronJob only when every
-#                          child exists and has 0 critical findings
+#   <base>-patch.N         index, created by the index CronJob when every
+#                          child exists and it has 0 criticals, or fewer than current
 # "current" = highest published <base>-patch.N index, else <base>.
 #
 # Modes:
@@ -232,8 +232,18 @@ plan_index() {
         crit=$((crit + c))
       done
       if [ $ok != 1 ]; then log "wait    $repo:$tag: children or scans not ready"; continue; fi
-      if [ $crit -gt 0 ]; then log "BLOCKED $repo:$tag: $crit critical remain (no fix available yet; retried tomorrow)"; continue; fi
-      echo "$repo $tag" >> "$WORK/index-plan"; log "publish $repo:$tag"
+      # Publish if clean, or at least strictly better than the current version
+      # (some CVEs have no fix anywhere yet; don't hold back the ones that do).
+      cur_crit=0
+      for a in $ARCHES; do
+        if has /tmp/tags "${CUR}_$a"; then
+          c=$(criticals "$repo" "${CUR}_$a"); if [ "$c" != pending ]; then cur_crit=$((cur_crit + c)); fi
+        fi
+      done
+      if [ $crit -gt 0 ] && [ $crit -ge $cur_crit ]; then
+        log "BLOCKED $repo:$tag: $crit critical, not fewer than $CUR ($cur_crit); retried tomorrow"; continue
+      fi
+      echo "$repo $tag" >> "$WORK/index-plan"; log "publish $repo:$tag ($crit critical, $CUR had $cur_crit)"
     done
   done
   aws ecr get-login-password > "$WORK/ecr-password"
