@@ -163,7 +163,13 @@ plan_build() {
             how="$how, go get ${bumps% }"
             # module mode (not vendor/workspace) so the bumped versions are used
             echo "ENV GOWORK=off GOFLAGS=-mod=mod"
-            echo "RUN cd /src && go get ${bumps% }"
+            # Fix versions are minimums: bump one module at a time and skip any
+            # that an earlier bump already raised to (or past) its target, so
+            # nothing is downgraded and dependents can pull newer versions in.
+            echo "RUN cd /src && for mv in ${bumps% }; do m=\${mv%@*}; v=\${mv#*@}; \\"
+            echo "      have=\$(go list -m -f '{{.Version}}' \"\$m\" 2>/dev/null || echo v0.0.0); \\"
+            echo "      if [ \"\$(printf '%s\\\\n%s\\\\n' \"\$have\" \"\$v\" | sort -V | tail -1)\" = \"\$have\" ]; then echo \"keep \$m \$have (>= \$v)\"; \\"
+            echo "      else echo \"bump \$m \$have -> \$v\"; go get \"\$m@\$v\" || exit 1; fi; done"
           fi
           echo "RUN cd /src && CGO_ENABLED=0 go build -trimpath -ldflags \"$ld\" -o /out$bin $pkg"
         fi

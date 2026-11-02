@@ -32,7 +32,9 @@ Go dependencies: for those same images, every Go module finding (any
 severity) with a `fixedInVersion` becomes a `go get module@vX` before the
 build, read from the scan on every run, so new CVEs get new bumps without any
 config change. Per module it uses the highest fixing version across its CVEs
-(the lowest version that fixes all of them), never a downgrade, and never a
+(the lowest version that fixes all of them) as a minimum: modules are bumped
+one at a time and skipped if an earlier bump already raised them, so there are
+no conflicting pins and never a downgrade. Never a
 pre-release/pseudo-version. Builds then run in module mode (`GOWORK=off
 GOFLAGS=-mod=mod`). A bump that breaks the build fails that arch's patch and is
 visible in the build log.
