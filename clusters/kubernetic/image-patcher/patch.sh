@@ -38,16 +38,15 @@ max_n() { # max_n <tagfile> <base> <suffix-regex>: highest N of <base>-patch.N<s
 pushed_epoch() { date -d "$(aws ecr describe-images --repository-name "$1" \
   --image-ids imageTag="$2" --query 'imageDetails[0].imagePushedAt' --output text)" +%s; }
 # criticals <repo> <tag>: prints count, or "pending" if the scan isn't done
+# Counts findings itself: with enhanced scanning, findingSeverityCounts only
+# covers the first page of findings. The CLI auto-paginates and merges pages.
 criticals() {
-  out=$(aws ecr describe-image-scan-findings --repository-name "$1" --image-id imageTag="$2" \
-    --query '[imageScanStatus.status, imageScanFindings.findingSeverityCounts.CRITICAL]' \
-    --output text 2>/dev/null) || { echo pending; return; }
-  # shellcheck disable=SC2086
-  set -- $out; st=${1:-}; c=${2:-None}
-  case "$st" in
-    COMPLETE|ACTIVE) if [ "$c" = None ]; then echo 0; else echo "$c"; fi;;
-    *) echo pending;;
-  esac
+  aws ecr describe-image-scan-findings --repository-name "$1" --image-id imageTag="$2" \
+    --output json 2>/dev/null | jq -r '
+      if (.imageScanStatus.status == "COMPLETE" or .imageScanStatus.status == "ACTIVE") then
+        [ (.imageScanFindings.enhancedFindings // [])[], (.imageScanFindings.findings // [])[]
+          | select(.severity == "CRITICAL") ] | length
+      else "pending" end' 2>/dev/null | grep . || echo pending
 }
 # state <repo> <base> <tagfile>: sets M (published patch), CUR, K (newest attempt)
 state() {
