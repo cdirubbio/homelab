@@ -53,6 +53,9 @@ spec:
                 - --cache-repo=774305584254.dkr.ecr.us-east-1.amazonaws.com/CHANGE-ME-cache
                 - --snapshot-mode=redo
                 - --compressed-caching=false    # lower memory use
+                # Pull Docker Hub base images from ECR Public's mirror instead
+                # (no anonymous rate limit); falls back to Docker Hub if missing.
+                - --registry-map=index.docker.io=public.ecr.aws/docker
               env:
                 # Only needed when the source repo is private.
                 - name: GIT_USERNAME
