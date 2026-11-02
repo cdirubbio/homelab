@@ -47,10 +47,11 @@ kubectl -n builds create job --from=cronjob/image-patch-amd64 p-$(date +%s) --dr
   | kubectl create -f -
 ```
 
-Gating: a `-patch.N` index is only published with 0 critical findings. If
-criticals remain (no fix upstream yet) it logs `BLOCKED`, and the next day's
-builds try `-patch.N+1` with whatever packages are newer by then. Tags are never
-overwritten.
+Gating: a `-patch.N` index is published when both arch children have 0
+critical findings, or strictly fewer criticals than the current version (some
+CVEs have no fix anywhere yet, e.g. a distro package with no update; the fixes
+that do exist still ship). Otherwise it logs `BLOCKED` and the next day's builds
+try `-patch.N+1` with whatever is newer by then. Tags are never overwritten.
 
 Scanning: ECR enhanced scanning (Amazon Inspector) with continuous rescans on
 `poc-e2e/*`, so CVEs published after an image was pushed are picked up.
