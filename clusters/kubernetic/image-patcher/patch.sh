@@ -166,10 +166,15 @@ plan_build() {
             # Fix versions are minimums: bump one module at a time and skip any
             # that an earlier bump already raised to (or past) its target, so
             # nothing is downgraded and dependents can pull newer versions in.
-            echo "RUN cd /src && for mv in ${bumps% }; do m=\${mv%@*}; v=\${mv#*@}; \\"
-            echo "      have=\$(go list -m -f '{{.Version}}' \"\$m\" 2>/dev/null || echo v0.0.0); \\"
-            echo "      if [ \"\$(printf '%s\\\\n%s\\\\n' \"\$have\" \"\$v\" | sort -V | tail -1)\" = \"\$have\" ]; then echo \"keep \$m \$have (>= \$v)\"; \\"
-            echo "      else echo \"bump \$m \$have -> \$v\"; go get \"\$m@\$v\" || exit 1; fi; done"
+            # Quoted heredoc: no shell/echo escaping of the loop body.
+            echo "ENV BUMPS=\"${bumps% }\""
+            cat <<'LOOP'
+RUN cd /src && for mv in $BUMPS; do m=${mv%@*}; v=${mv#*@}; \
+      have=$(go list -m -f '{{.Version}}' "$m" 2>/dev/null || echo v0.0.0); \
+      top=$(printf '%s\n%s\n' "$have" "$v" | sort -V | tail -1); \
+      if [ "$top" = "$have" ]; then echo "keep $m $have (>= $v)"; \
+      else echo "bump $m $have -> $v"; go get "$m@$v" || exit 1; fi; done
+LOOP
           fi
           echo "RUN cd /src && CGO_ENABLED=0 go build -trimpath -ldflags \"$ld\" -o /out$bin $pkg"
         fi
