@@ -3,6 +3,7 @@
 #
 #  1. Turns on ECR enhanced scanning (Amazon Inspector) for the registry:
 #       poc-e2e/*  -> CONTINUOUS_SCAN (rescanned when new CVEs are published)
+#     Inspector rescan duration: LIFETIME (pull-date window 180 days).
 #     REGISTRY-WIDE CHANGE: in enhanced mode only repos matching a rule are
 #     scanned, so every other repo that has basic scan-on-push today is added
 #     as a SCAN_ON_PUSH rule to keep it scanned (build-cache repos *-cache are
@@ -24,6 +25,10 @@ export AWS_REGION=$REGION
 echo "current registry scanning config:"
 aws ecr get-registry-scanning-configuration --query scanningConfiguration --output json
 aws inspector2 enable --resource-types ECR >/dev/null
+# Keep rescanning images for their whole life (mirrored images are rarely
+# pulled), but stop for images nothing has pulled in 180 days.
+aws inspector2 update-configuration \
+  --ecr-configuration rescanDuration=LIFETIME,pullDateRescanDuration=DAYS_180 >/dev/null
 KEEP=$(aws ecr describe-repositories --output json | jq -c '[.repositories[]
   | select(.imageScanningConfiguration.scanOnPush and (.repositoryName | startswith("poc-e2e/") | not) and (.repositoryName | endswith("-cache") | not))
   | {filter: .repositoryName, filterType: "WILDCARD"}]')
