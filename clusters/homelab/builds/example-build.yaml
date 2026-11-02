@@ -1,0 +1,84 @@
+---
+# Example Kaniko build: copy this file once per image you want to build.
+#
+# It is a CronJob so that it is
+#   - GitOps friendly (Jobs are immutable; a CronJob can be edited by Flux),
+#   - rebuilt on a schedule (picks up base-image security fixes),
+#   - runnable on demand:
+#       kubectl -n builds create job --from=cronjob/build-example build-example-manual
+#
+# Shipped with `suspend: true` so it does nothing until you point it at a real
+# repo and create the `registry-credentials` Secret (see README.md).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: build-example
+  namespace: builds
+spec:
+  suspend: true                     # flip to false once configured
+  schedule: "17 4 * * 0"            # weekly, Sunday 04:17
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: kaniko
+            app.kubernetes.io/instance: build-example
+        spec:
+          serviceAccountName: kaniko
+          restartPolicy: Never
+          containers:
+            - name: kaniko
+              image: ghcr.io/osscontainertools/kaniko:v1.28.6
+              args:
+                # Build context straight from git. Format:
+                #   git://<host>/<owner>/<repo>.git#refs/heads/<branch>
+                - --context=git://github.com/cdirubbio/CHANGE-ME.git#refs/heads/main
+                - --context-sub-path=.          # folder holding the Dockerfile
+                - --dockerfile=Dockerfile
+                - --destination=ghcr.io/cdirubbio/CHANGE-ME:latest
+                # Layer cache stored in the registry, so rebuilds are fast.
+                - --cache=true
+                - --cache-repo=ghcr.io/cdirubbio/CHANGE-ME/cache
+                - --snapshot-mode=redo
+                - --compressed-caching=false    # lower memory use
+              env:
+                # Only needed when the source repo is private.
+                - name: GIT_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: git-credentials
+                      key: username
+                      optional: true
+                - name: GIT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: git-credentials
+                      key: password
+                      optional: true
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                  ephemeral-storage: 5Gi
+                limits:
+                  memory: 4Gi
+                  ephemeral-storage: 20Gi
+              volumeMounts:
+                - name: registry-credentials
+                  mountPath: /kaniko/.docker
+                  readOnly: true
+          volumes:
+            # kubernetes.io/dockerconfigjson Secret -> /kaniko/.docker/config.json
+            - name: registry-credentials
+              secret:
+                secretName: registry-credentials
+                items:
+                  - key: .dockerconfigjson
+                    path: config.json
