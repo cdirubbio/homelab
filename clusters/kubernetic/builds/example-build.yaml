@@ -33,23 +33,24 @@ spec:
         spec:
           serviceAccountName: kaniko
           restartPolicy: Never
-          # EKS Auto Mode may launch Graviton (arm64) nodes. Kaniko builds for
-          # the node's architecture, so pin the arch you want the image for.
+          # Kaniko builds for the node's architecture, so pin it. The built-in
+          # Auto Mode general-purpose NodePool is amd64 only; arm64 needs a
+          # custom NodePool.
           nodeSelector:
             kubernetes.io/arch: amd64
           containers:
             - name: kaniko
-              image: ghcr.io/osscontainertools/kaniko:v1.28.6
+              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6  # one-time copy of ghcr.io/osscontainertools/kaniko (scripts/kubernetic-builds-aws-setup.sh)
               args:
                 # Build context straight from git. Format:
                 #   git://<host>/<owner>/<repo>.git#refs/heads/<branch>
                 - --context=git://github.com/cdirubbio/CHANGE-ME.git#refs/heads/main
                 - --context-sub-path=.          # folder holding the Dockerfile
                 - --dockerfile=Dockerfile
-                - --destination=CHANGE-ME-ACCOUNT_ID.dkr.ecr.CHANGE-ME-REGION.amazonaws.com/CHANGE-ME:latest
+                - --destination=774305584254.dkr.ecr.us-east-1.amazonaws.com/CHANGE-ME:latest
                 # Layer cache stored in ECR, so rebuilds are fast.
                 - --cache=true
-                - --cache-repo=CHANGE-ME-ACCOUNT_ID.dkr.ecr.CHANGE-ME-REGION.amazonaws.com/CHANGE-ME-cache
+                - --cache-repo=774305584254.dkr.ecr.us-east-1.amazonaws.com/CHANGE-ME-cache
                 - --snapshot-mode=redo
                 - --compressed-caching=false    # lower memory use
               env:

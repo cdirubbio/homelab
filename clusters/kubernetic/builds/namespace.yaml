@@ -34,6 +34,6 @@ data:
   config.json: |
     {
       "credHelpers": {
-        "CHANGE-ME-ACCOUNT_ID.dkr.ecr.CHANGE-ME-REGION.amazonaws.com": "ecr-login"
+        "774305584254.dkr.ecr.us-east-1.amazonaws.com": "ecr-login"
       }
     }
