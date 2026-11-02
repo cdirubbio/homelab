@@ -47,8 +47,9 @@ spec:
               image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug  # one-time ECR copy (has a shell)
               command: ["/busybox/sh", "/config/patch.sh", "build", "amd64"]
               resources:
-                requests: {cpu: "1", memory: 2Gi, ephemeral-storage: 10Gi}
-                limits: {memory: 4Gi, ephemeral-storage: 30Gi}
+                # Go source rebuilds (sources.txt) compile e.g. agnhost's k8s deps
+                requests: {cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi}
+                limits: {memory: 8Gi, ephemeral-storage: 40Gi}
               volumeMounts:
                 - {name: config, mountPath: /config, readOnly: true}
                 - {name: work, mountPath: /work}
@@ -100,8 +101,9 @@ spec:
               image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug  # one-time ECR copy (has a shell)
               command: ["/busybox/sh", "/config/patch.sh", "build", "arm64"]
               resources:
-                requests: {cpu: "1", memory: 2Gi, ephemeral-storage: 10Gi}
-                limits: {memory: 4Gi, ephemeral-storage: 30Gi}
+                # Go source rebuilds (sources.txt) compile e.g. agnhost's k8s deps
+                requests: {cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi}
+                limits: {memory: 8Gi, ephemeral-storage: 40Gi}
               volumeMounts:
                 - {name: config, mountPath: /config, readOnly: true}
                 - {name: work, mountPath: /work}
