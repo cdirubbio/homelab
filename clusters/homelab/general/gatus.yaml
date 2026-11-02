@@ -98,10 +98,4 @@ data:
         interval: 60s
         conditions:
           - "[STATUS] == 200"
-
-      - name: Anaphora
-        url: https://anaphora.sh.
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
 ---
