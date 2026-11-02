@@ -17,7 +17,10 @@ set -eu
 REG=${REG:-774305584254.dkr.ecr.us-east-1.amazonaws.com}
 PREFIX=${PREFIX:-poc-e2e}
 ARCHES="amd64 arm64"
-RETRY_AFTER_SECONDS=$((20 * 3600))   # a blocked patch gets a fresh N next day
+RETRY_AFTER_SECONDS=${RETRY_AFTER_SECONDS:-$((20 * 3600))}   # a blocked patch gets a fresh N next day
+FORCE_NEW_PATCH=${FORCE_NEW_PATCH:-}  # manual runs: always start a new -patch.N
+GO_IMAGE=${GO_IMAGE:-public.ecr.aws/docker/library/golang:1.27.3}
+SOURCES=${SOURCES:-/config/sources.txt}
 WORK=${WORK:-/work}
 
 log() { echo "$*" >&2; }
@@ -46,7 +49,7 @@ criticals() {
     log "  scan lookup $1:$2: $(grep -o '([A-Za-z]*Exception)\|(AccessDenied[A-Za-z]*)' /tmp/scan-err | head -1) $(tail -c 200 /tmp/scan-err)"
     echo pending; return
   fi
-  echo "$out" | jq -r '
+  printf '%s\n' "$out" | jq -r '
       if (.imageScanStatus.status == "COMPLETE" or .imageScanStatus.status == "ACTIVE") then
         [ (.imageScanFindings.enhancedFindings // [])[], (.imageScanFindings.findings // [])[]
           | select(.severity == "CRITICAL") ] | length
@@ -57,13 +60,20 @@ state() {
   M=$(max_n "$3" "$2" ''); if [ "$M" -gt 0 ]; then CUR="$2-patch.$M"; else CUR=$2; fi
   K=0; for a in $ARCHES; do k=$(max_n "$3" "$2" "_$a"); if [ "$k" -gt "$K" ]; then K=$k; fi; done
 }
-image_user() { # image_user <repo> <tag>: the image's configured USER
+image_config() { # image_config <repo> <tag>: the image config JSON
   m=$(aws ecr batch-get-image --repository-name "$1" --image-ids imageTag="$2" \
     --accepted-media-types application/vnd.oci.image.manifest.v1+json application/vnd.docker.distribution.manifest.v2+json \
     --query 'images[0].imageManifest' --output text)
   d=$(echo "$m" | jq -r .config.digest)
   u=$(aws ecr get-download-url-for-layer --repository-name "$1" --layer-digest "$d" --query downloadUrl --output text)
-  curl -sf "$u" | jq -r '.config.User // ""'
+  curl -sf "$u"
+}
+# source_for <name> <version>: the sources.txt line for this image, if any
+source_for() {
+  [ -f "$SOURCES" ] || return 0
+  grep -v '^[[:space:]]*#' "$SOURCES" | while read -r n v rest; do
+    if [ "$n" = "$1" ] && [ "$v" = "$2" ]; then echo "$rest"; fi
+  done
 }
 
 plan_build() {
@@ -82,6 +92,7 @@ plan_build() {
       if [ $pend = 1 ]; then log "wait  $id: scan of $CUR pending"; continue; fi
       if [ $crit = 0 ]; then log "ok    $id: $CUR has no critical findings"; continue; fi
       if [ "$K" -le "$M" ]; then N=$((M + 1))
+      elif [ -n "$FORCE_NEW_PATCH" ]; then N=$((K + 1))
       elif ! has /tmp/tags "$base-patch.${K}_$arch"; then N=$K
       else
         missing=0; newest=0
@@ -95,20 +106,43 @@ plan_build() {
         N=$((K + 1))
       fi
       name=$(echo "$repo-$base-$N" | tr '/:' '--')
-      user=$(image_user "$repo" "${base}_$arch")
+      cfg=$(image_config "$repo" "${base}_$arch")
+      user=$(printf '%s\n' "$cfg" | jq -r '.config.User // ""')
+      src=$(source_for "${repo#"$PREFIX"/}" "$base")
+      from="$REG/$repo:${base}_$arch"; how="OS packages"
       mkdir -p "$WORK/$name"
       {
-        echo "FROM $REG/$repo:${base}_$arch"
+        if [ -n "$src" ]; then
+          # shellcheck disable=SC2086
+          set -- $src; git=$1 ref=$2 pkg=$3 bin=$4 xflag=$5 newbase=$6
+          if [ "$xflag" = - ]; then ld="-s -w"; else ld="-s -w -X $xflag"; fi
+          if [ "$newbase" != keep ]; then from=$newbase; fi
+          how="OS packages + $bin rebuilt from $git@$ref with ${GO_IMAGE##*:}"
+          echo "FROM $GO_IMAGE AS build"
+          echo "RUN git init -q /src && cd /src && git remote add origin $git \\"
+          echo "    && git fetch -q --depth 1 origin $ref && git checkout -q FETCH_HEAD"
+          echo "RUN cd /src && CGO_ENABLED=0 go build -trimpath -ldflags \"$ld\" -o /out$bin $pkg"
+        fi
+        echo "FROM $from"
         echo "USER root"
         echo 'RUN if command -v apk >/dev/null 2>&1; then apk upgrade --no-cache; \'
         echo '    elif command -v apt-get >/dev/null 2>&1; then apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && rm -rf /var/lib/apt/lists/*; \'
         echo '    elif command -v dnf >/dev/null 2>&1; then dnf -y upgrade && dnf clean all; \'
         echo '    elif command -v microdnf >/dev/null 2>&1; then microdnf -y upgrade && microdnf clean all; \'
         echo '    else echo "no package manager in image: cannot patch, bump upstream version instead"; exit 3; fi'
+        if [ -n "$src" ]; then
+          echo "COPY --from=build /out$bin $bin"
+          if [ "$newbase" != keep ]; then
+            printf '%s\n' "$cfg" | jq -r '.config
+              | (if (.WorkingDir // "") != "" then "WORKDIR \(.WorkingDir)" else empty end),
+                (if .Entrypoint then "ENTRYPOINT \(.Entrypoint | tojson)" else empty end),
+                (if .Cmd then "CMD \(.Cmd | tojson)" else empty end)'
+          fi
+        fi
         if [ -n "$user" ]; then echo "USER $user"; fi
       } > "$WORK/$name/Dockerfile"
       echo "$name $REG/$repo:$base-patch.${N}_$arch" >> "$WORK/plan"
-      log "build $id: $crit critical in $CUR -> $base-patch.${N}_$arch"
+      log "build $id: $crit critical in $CUR -> $base-patch.${N}_$arch ($how)"
     done
   done
 }

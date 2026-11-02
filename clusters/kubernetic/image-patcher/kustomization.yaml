@@ -10,5 +10,6 @@ configMapGenerator:
   - name: image-patcher
     files:
       - patch.sh
+      - sources.txt
     options:
       disableNameSuffixHash: true

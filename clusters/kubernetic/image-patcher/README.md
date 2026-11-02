@@ -19,6 +19,23 @@ the original `USER`. Images with no shell or package manager (static Go
 binaries, busybox) fail the build with a clear message: the fix for those is a
 newer upstream version in `../image-mirror/images.txt`.
 
+Go binaries: OS upgrades can't fix CVEs in Go code compiled into an image
+(e.g. `go/stdlib`). For images listed in `sources.txt` (matched on name and
+mirrored version), the patch also rebuilds that binary from the pinned upstream
+source with `GO_IMAGE` (currently Go 1.27.3) and copies it over the original.
+`base` is either `keep` (patch on top of the mirrored image) or a fresh base
+image, e.g. to move cyclonus off end-of-life Alpine 3.13. Building natively on
+each arch also yields real arm64 binaries. Bump `GO_IMAGE` in `patch.sh` when a
+newer Go fixes new stdlib CVEs.
+
+To force a new `-patch.N` now (instead of waiting for a blocked one to age out):
+
+```sh
+kubectl -n builds create job --from=cronjob/image-patch-amd64 p-$(date +%s) --dry-run=client -o json \
+  | jq '.spec.template.spec.initContainers[0].env += [{"name":"FORCE_NEW_PATCH","value":"1"}]' \
+  | kubectl create -f -
+```
+
 Gating: a `-patch.N` index is only published with 0 critical findings. If
 criticals remain (no fix upstream yet) it logs `BLOCKED`, and the next day's
 builds try `-patch.N+1` with whatever packages are newer by then. Tags are never
