@@ -17,3 +17,5 @@ spec:
     operator:
       replicas: 1
     kubeProxyReplacement: true
+    l2announcements:
+      enabled: true
