@@ -41,8 +41,12 @@ pushed_epoch() { date -d "$(aws ecr describe-images --repository-name "$1" \
 # Counts findings itself: with enhanced scanning, findingSeverityCounts only
 # covers the first page of findings. The CLI auto-paginates and merges pages.
 criticals() {
-  aws ecr describe-image-scan-findings --repository-name "$1" --image-id imageTag="$2" \
-    --output json 2>/dev/null | jq -r '
+  if ! out=$(aws ecr describe-image-scan-findings --repository-name "$1" --image-id imageTag="$2" \
+      --output json 2>/tmp/scan-err); then
+    log "  scan lookup $1:$2: $(grep -o '([A-Za-z]*Exception)\|(AccessDenied[A-Za-z]*)' /tmp/scan-err | head -1) $(tail -c 200 /tmp/scan-err)"
+    echo pending; return
+  fi
+  echo "$out" | jq -r '
       if (.imageScanStatus.status == "COMPLETE" or .imageScanStatus.status == "ACTIVE") then
         [ (.imageScanFindings.enhancedFindings // [])[], (.imageScanFindings.findings // [])[]
           | select(.severity == "CRITICAL") ] | length
