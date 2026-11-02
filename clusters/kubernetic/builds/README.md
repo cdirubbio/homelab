@@ -7,7 +7,7 @@ Flux applies everything in this folder to the `builds` namespace on the
 |------|---------|
 | `namespace.yaml` | `builds` namespace (Pod Security `baseline`), `kaniko` ServiceAccount, ECR docker config |
 | `example-build.yaml` | Template CronJob (suspended) that builds a Dockerfile from git and pushes it to ECR |
-| `build-subdc-backend.yaml` | Builds `cdirubbio/subdc` `backend/src` -> ECR `subdc/backend:latest`, weekly |
+| `build-subdc-backend.yaml` | Builds `cdirubbio/subdc` `backend/src` -> ECR `subdc/backend:latest`, every minute |
 
 Kaniko image: [`ghcr.io/osscontainertools/kaniko`](https://github.com/osscontainertools/kaniko),
 a maintained fork, copied once into ECR (`ghcr/osscontainertools/kaniko`) so

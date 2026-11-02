@@ -8,7 +8,7 @@ metadata:
   namespace: builds
 spec:
   suspend: false
-  schedule: "17 4 * * 0"            # weekly, Sunday 04:17 UTC
+  schedule: "* * * * *"              # every minute (Kubernetes CronJob minimum)
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
