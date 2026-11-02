@@ -1,0 +1,57 @@
+---
+# ECR access comes from a Pod Identity association on this ServiceAccount
+# (scripts/kubernetic-image-mirror-aws-setup.sh), limited to poc-e2e/* repos.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: image-mirror
+automountServiceAccountToken: false
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: image-mirror
+  annotations:
+    # Jobs are immutable; let Flux delete + recreate it when the spec changes.
+    kustomize.toolkit.fluxcd.io/force: enabled
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: image-mirror
+    spec:
+      serviceAccountName: image-mirror
+      restartPolicy: Never
+      initContainers:
+        - name: prepare
+          image: public.ecr.aws/aws-cli/aws-cli:2.39.3
+          command: ["/bin/sh", "/config/mirror.sh", "prepare"]
+          env:
+            - name: AWS_REGION
+              value: us-east-1
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          volumeMounts:
+            - {name: config, mountPath: /config, readOnly: true}
+            - {name: shared, mountPath: /shared}
+      containers:
+        - name: copy
+          image: gcr.io/go-containerregistry/crane@sha256:e78770b31258a3846f878036d9c1f63fbe4c871f9f56990bf77fd95c013e3c1b  # :debug (has a shell)
+          command: ["/busybox/sh", "/config/mirror.sh", "copy"]
+          resources:
+            requests: {cpu: 250m, memory: 256Mi}
+            limits: {memory: 1Gi}
+          volumeMounts:
+            - {name: config, mountPath: /config, readOnly: true}
+            - {name: shared, mountPath: /shared, readOnly: true}
+      volumes:
+        - name: config
+          configMap:
+            name: image-mirror
+        - name: shared
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
