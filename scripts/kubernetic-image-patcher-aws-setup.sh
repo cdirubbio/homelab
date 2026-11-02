@@ -9,7 +9,8 @@
 #     skipped). Inspector bills per image scan.
 #  2. Copies the Kaniko debug image (has a shell) into ECR.
 #  3. Creates IAM role image-patcher (Pod Identity, this cluster only): read
-#     scan findings, pull/push poc-e2e/*. Binds it to builds/image-patcher.
+#     scan findings (enhanced scanning reads them from Inspector, hence
+#     inspector2:List*), pull/push poc-e2e/*. Binds it to builds/image-patcher.
 set -euo pipefail
 ACCOUNT_ID=774305584254
 REGION=us-east-1
@@ -55,6 +56,7 @@ fi
 aws iam put-role-policy --role-name "$ROLE" --policy-name ecr-poc-e2e-patch --policy-document "$(cat <<JSON
 {"Version":"2012-10-17","Statement":[
  {"Sid":"Global","Effect":"Allow","Action":["ecr:GetAuthorizationToken","ecr:DescribeRepositories"],"Resource":"*"},
+ {"Sid":"EnhancedScanFindings","Effect":"Allow","Action":["inspector2:ListFindings","inspector2:ListCoverage"],"Resource":"*"},
  {"Sid":"Repos","Effect":"Allow","Action":[
    "ecr:DescribeImages","ecr:ListImages","ecr:DescribeImageScanFindings",
    "ecr:BatchGetImage","ecr:GetDownloadUrlForLayer","ecr:BatchCheckLayerAvailability",
