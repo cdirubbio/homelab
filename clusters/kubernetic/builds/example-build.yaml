@@ -8,7 +8,7 @@
 #       kubectl -n builds create job --from=cronjob/build-example build-example-manual
 #
 # Shipped with `suspend: true` so it does nothing until you point it at a real
-# repo and create the `registry-credentials` Secret (see README.md).
+# repo and set up ECR + Pod Identity (see README.md).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -16,7 +16,7 @@ metadata:
   namespace: builds
 spec:
   suspend: true                     # flip to false once configured
-  schedule: "17 4 * * 0"            # weekly, Sunday 04:17
+  schedule: "17 4 * * 0"            # weekly, Sunday 04:17 UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
@@ -33,6 +33,10 @@ spec:
         spec:
           serviceAccountName: kaniko
           restartPolicy: Never
+          # EKS Auto Mode may launch Graviton (arm64) nodes. Kaniko builds for
+          # the node's architecture, so pin the arch you want the image for.
+          nodeSelector:
+            kubernetes.io/arch: amd64
           containers:
             - name: kaniko
               image: ghcr.io/osscontainertools/kaniko:v1.28.6
@@ -42,10 +46,10 @@ spec:
                 - --context=git://github.com/cdirubbio/CHANGE-ME.git#refs/heads/main
                 - --context-sub-path=.          # folder holding the Dockerfile
                 - --dockerfile=Dockerfile
-                - --destination=ghcr.io/cdirubbio/CHANGE-ME:latest
-                # Layer cache stored in the registry, so rebuilds are fast.
+                - --destination=CHANGE-ME-ACCOUNT_ID.dkr.ecr.CHANGE-ME-REGION.amazonaws.com/CHANGE-ME:latest
+                # Layer cache stored in ECR, so rebuilds are fast.
                 - --cache=true
-                - --cache-repo=ghcr.io/cdirubbio/CHANGE-ME/cache
+                - --cache-repo=CHANGE-ME-ACCOUNT_ID.dkr.ecr.CHANGE-ME-REGION.amazonaws.com/CHANGE-ME-cache
                 - --snapshot-mode=redo
                 - --compressed-caching=false    # lower memory use
               env:
@@ -64,21 +68,17 @@ spec:
                       optional: true
               resources:
                 requests:
-                  cpu: 500m
-                  memory: 1Gi
-                  ephemeral-storage: 5Gi
+                  cpu: "1"
+                  memory: 2Gi
+                  ephemeral-storage: 10Gi
                 limits:
                   memory: 4Gi
-                  ephemeral-storage: 20Gi
+                  ephemeral-storage: 30Gi
               volumeMounts:
-                - name: registry-credentials
+                - name: docker-config
                   mountPath: /kaniko/.docker
                   readOnly: true
           volumes:
-            # kubernetes.io/dockerconfigjson Secret -> /kaniko/.docker/config.json
-            - name: registry-credentials
-              secret:
-                secretName: registry-credentials
-                items:
-                  - key: .dockerconfigjson
-                    path: config.json
+            - name: docker-config
+              configMap:
+                name: kaniko-docker-config
