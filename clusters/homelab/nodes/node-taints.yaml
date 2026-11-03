@@ -1,0 +1,47 @@
+# Node taints managed by Flux (server-side apply onto the existing Node objects).
+# - prune: disabled  -> removing an entry here will NOT delete the Node (but also
+#   will not remove the taint; untaint manually with `kubectl taint node <n> issue-`).
+# - Node names must match `kubectl get nodes` exactly, or Flux will create a bogus Node.
+# - spec.taints is an atomic list: Flux owns the whole list on these nodes.
+# Pods need this toleration to run here:
+#   tolerations:
+#   - key: issue
+#     operator: Equal
+#     value: nvme
+#     effect: NoExecute
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wrkr-192-168-1-189
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  taints:
+  - key: issue
+    value: nvme
+    effect: NoExecute
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: wrkr-192-168-1-190
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  taints:
+  - key: issue
+    value: nvme
+    effect: NoExecute
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: worker-node-526121
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  taints:
+  - key: issue
+    value: nvme
+    effect: NoExecute
