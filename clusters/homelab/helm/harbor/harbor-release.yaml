@@ -15,3 +15,18 @@ spec:
         name: harbor
         namespace: flux-system
   targetNamespace: harbor
+  values:
+    externalURL: https://harbor.chrdir.com
+    expose:
+      type: ingress
+      tls:
+        enabled: true
+        certSource: secret
+        secret:
+          secretName: harbor-tls
+      ingress:
+        className: traefik
+        hosts:
+          core: harbor.chrdir.com
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-prod
