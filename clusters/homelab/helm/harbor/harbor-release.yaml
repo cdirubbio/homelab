@@ -22,6 +22,10 @@ spec:
     # registry/jobservice use RWO Longhorn volumes; RollingUpdate causes Multi-Attach errors
     updateStrategy:
       type: Recreate
+    persistence:
+      persistentVolumeClaim:
+        registry:
+          size: 75Gi
     expose:
       type: ingress
       tls:
