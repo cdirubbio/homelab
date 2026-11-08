@@ -19,6 +19,9 @@ spec:
     externalURL: https://harbor.chrdir.com
     # chart bug: certSource=secret leaves the core ca-download volume empty without this
     caSecretName: harbor-tls
+    # registry/jobservice use RWO Longhorn volumes; RollingUpdate causes Multi-Attach errors
+    updateStrategy:
+      type: Recreate
     expose:
       type: ingress
       tls:
