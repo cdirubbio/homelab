@@ -8,6 +8,10 @@ spec:
   interval: 30m
   chart:
     spec:
+      values:
+        service:
+          type: NodePort
+          port: 32400
       chart: plex-media-server
       version: "1.x"
       sourceRef:
