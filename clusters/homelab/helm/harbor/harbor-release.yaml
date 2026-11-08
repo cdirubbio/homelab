@@ -17,6 +17,8 @@ spec:
   targetNamespace: harbor
   values:
     externalURL: https://harbor.chrdir.com
+    # chart bug: certSource=secret leaves the core ca-download volume empty without this
+    caSecretName: harbor-tls
     expose:
       type: ingress
       tls:
