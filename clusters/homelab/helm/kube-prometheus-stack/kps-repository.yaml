@@ -6,7 +6,7 @@ metadata:
 spec:
   interval: 10m
   ref:
-    semver: "87.x"
+    semver: "93.x"
   url: oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
