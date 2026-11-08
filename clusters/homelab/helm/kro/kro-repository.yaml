@@ -6,5 +6,5 @@ metadata:
 spec:
   interval: 10m
   ref:
-    semver: "v0.10.x"
+    semver: "v0.9.x"
   url: oci://registry.k8s.io/kro/charts/kro
