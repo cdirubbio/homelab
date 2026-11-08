@@ -11,7 +11,7 @@ spec:
       values:
         service:
           type: NodePort
-          port: 32400
+          port: 32401
       chart: plex-media-server
       version: "1.x"
       sourceRef:
