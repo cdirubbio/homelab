@@ -36,6 +36,7 @@ spec:
     secret:
       additionalSecrets:
         authelia-users: {}
+        authelia-oidc: {}
 
     configMap:
       theme: auto
@@ -63,6 +64,44 @@ spec:
         file:
           enabled: true
           path: /secrets/authelia-users/users_database.yml
+
+      identity_providers:
+        oidc:
+          enabled: true
+          jwks:
+            - key_id: main
+              algorithm: RS256
+              use: sig
+              key:
+                path: /secrets/authelia-oidc/jwks.pem
+          claims_policies:
+            kubernetes:
+              id_token:
+                - email
+                - email_verified
+                - preferred_username
+                - groups
+          clients:
+            - client_id: headlamp
+              client_name: Headlamp
+              client_secret:
+                path: /secrets/authelia-oidc/headlamp.digest
+              claims_policy: kubernetes
+              authorization_policy: two_factor
+              redirect_uris:
+                - https://k8s.dirubbio.com/oidc-callback
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              token_endpoint_auth_method: client_secret_basic
 
       access_control:
         default_policy: deny
