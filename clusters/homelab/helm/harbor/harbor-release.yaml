@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: harbor
-      version: "2.x"
+      version: "x.x"
       sourceRef:
         kind: HelmRepository
         name: harbor
