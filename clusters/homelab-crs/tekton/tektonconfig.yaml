@@ -1,0 +1,17 @@
+# Reconciled by the tekton-operator HelmRelease. The name must be "config".
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  profile: basic            # Pipelines + Triggers (+ Chains/Results, disabled below)
+  targetNamespace: tekton-pipelines
+  chain:
+    disabled: true
+  result:
+    disabled: true
+  pruner:                   # keep the last 20 TaskRuns/PipelineRuns per namespace
+    disabled: false
+    resources: [taskrun, pipelinerun]
+    keep: 20
+    schedule: "0 4 * * *"
