@@ -95,12 +95,12 @@ data:
         conditions:
           - "[STATUS] == 200"
 
-      - name: Grafana
-        group: Kubernetes
-        url: http://kps-grafana.monitoring.svc.cluster.local
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
+      # - name: Grafana
+        # group: Kubernetes
+        # url: http://kps-grafana.monitoring.svc.cluster.local
+        # interval: 60s
+        # conditions:
+          # - "[STATUS] == 200"
 
       - name: Longhorn
         group: Kubernetes
@@ -117,12 +117,12 @@ data:
           - "[STATUS] == 200"
           - "[BODY].status == healthy"
 
-      - name: Prometheus
-        group: Kubernetes
-        url: http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
+      # - name: Prometheus
+        # group: Kubernetes
+        # url: http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+        # interval: 60s
+        # conditions:
+          # - "[STATUS] == 200"
 
       - name: Docmost
         group: Applications
