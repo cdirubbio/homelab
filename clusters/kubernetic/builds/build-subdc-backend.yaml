@@ -1,6 +1,4 @@
 ---
-# Builds github.com/cdirubbio/subdc backend/src -> ECR subdc/backend:latest.
-# Run now: kubectl -n builds create job --from=cronjob/build-subdc-backend build-subdc-backend-$(date +%s)
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -8,7 +6,7 @@ metadata:
   namespace: builds
 spec:
   suspend: false
-  schedule: "* * * * *"              # every minute (Kubernetes CronJob minimum)
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
@@ -25,26 +23,20 @@ spec:
         spec:
           serviceAccountName: kaniko
           restartPolicy: Never
-          # Kaniko builds for the node's architecture, so pin it. The built-in
-          # Auto Mode general-purpose NodePool is amd64 only; arm64 needs a
-          # custom NodePool.
           nodeSelector:
             kubernetes.io/arch: amd64
           containers:
             - name: kaniko
-              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6  # one-time copy of ghcr.io/osscontainertools/kaniko (scripts/kubernetic-builds-aws-setup.sh)
+              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6
               args:
                 - --context=git://github.com/cdirubbio/subdc.git#refs/heads/main
                 - --context-sub-path=backend/src
                 - --dockerfile=Dockerfile
                 - --destination=774305584254.dkr.ecr.us-east-1.amazonaws.com/subdc/backend:latest
-                # Layer cache stored in ECR, so rebuilds are fast.
                 - --cache=true
                 - --cache-repo=774305584254.dkr.ecr.us-east-1.amazonaws.com/subdc/backend-cache
                 - --snapshot-mode=redo
-                - --compressed-caching=false    # lower memory use
-                # Pull Docker Hub base images from ECR Public's mirror instead
-                # (no anonymous rate limit); falls back to Docker Hub if missing.
+                - --compressed-caching=false
                 - --registry-map=index.docker.io=public.ecr.aws/docker
               resources:
                 requests:

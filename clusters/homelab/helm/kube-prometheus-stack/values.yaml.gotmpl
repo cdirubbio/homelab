@@ -1,4 +1,3 @@
-# Disable Alertmanager to save memory
 alertmanager:
   enabled: false
 grafana:
@@ -17,7 +16,6 @@ grafana:
     nodePort: 31000
     type: NodePort
 
-
 prometheus:
   prometheusSpec:
     replicas: 1
@@ -26,7 +24,6 @@ prometheus:
       requests:
         cpu: 100m
         memory: 512Mi
-
 
 defaultRules:
   create: false

@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Build a never-booted Ubuntu 24.04 k3s node template on a Proxmox host.
-# Usage: ./k3s-template.sh [TEMPLATE_ID]
-# Env: STORAGE (local-lvm) BRIDGE (vmbr0) DISK_SIZE (40G) TEMPLATE_NAME (ubuntu-2404-k3s)
 set -euo pipefail
 
 TEMPLATE_ID=${1:-9024}

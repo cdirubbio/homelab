@@ -1,6 +1,4 @@
 #!/bin/sh
-# prepare: (aws-cli) create missing ECR repos, write an ECR login token
-# copy:    (crane)   mirror each image in images.txt
 set -eu
 REG=${REG:-774305584254.dkr.ecr.us-east-1.amazonaws.com}
 PREFIX=${PREFIX:-poc-e2e}
@@ -20,7 +18,6 @@ prepare() {
   aws ecr get-login-password > "$PASSWORD_FILE"
 }
 
-# copy_tag <src@digest> <dst:tag> <digest>: push unless the tag already holds this digest
 copy_tag() {
   have=$(crane digest "$2" 2>/dev/null || true)
   if [ -z "$have" ]; then crane copy "$1" "$2"
@@ -38,7 +35,6 @@ copy() {
     echo "== $name $ver ($src)"
     case "$ver" in *latest*) echo "  FAIL version contains 'latest'"; fail=1; continue;; esac
     if crane digest "$dst:$ver" >/dev/null 2>&1; then echo "  skip: $dst:$ver already published"; continue; fi
-    # Resolve every platform first so a missing one pushes nothing.
     ok=1; pairs=""; children=""
     for p in $(echo "$plats" | tr , ' '); do
       d=$(crane digest --platform "$p" "$src" 2>/dev/null) || { echo "  FAIL $src has no $p"; ok=0; break; }
@@ -53,7 +49,6 @@ copy() {
       done
     fi
     if [ $ok = 1 ]; then
-      # shellcheck disable=SC2086
       crane index append $children -t "$dst:$ver"
       echo "  published $dst:$ver ($plats)"
     else

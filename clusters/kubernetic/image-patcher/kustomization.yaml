@@ -3,9 +3,6 @@ kind: Kustomization
 namespace: builds
 resources:
   - cronjobs.yaml
-# Fixed name (no content hash): with a hashed name, every patch.sh change
-# makes Flux prune the old ConfigMap while a queued patch pod may still need
-# it. CronJob pods read patch.sh at start, so a stable name is enough.
 configMapGenerator:
   - name: image-patcher
     files:

@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# One-time AWS setup for clusters/kubernetic/image-mirror. Safe to re-run.
-# Creates IAM role image-mirror (Pod Identity, this cluster only) that can
-# create and push poc-e2e/* ECR repos, and binds it to builds/image-mirror.
-# Also creates ECR pull-through cache rules (no upstream credentials needed):
-#   ecr-public/* -> public.ecr.aws, k8s/* -> registry.k8s.io
 set -euo pipefail
 ACCOUNT_ID=774305584254
 REGION=us-east-1
@@ -11,8 +6,7 @@ CLUSTER=kubernetic
 ROLE=image-mirror
 export AWS_REGION=$REGION
 
-# --- Pull-through cache rules --------------------------------------------------
-ensure_ptc() { # prefix upstream
+ensure_ptc() {
   aws ecr describe-pull-through-cache-rules --ecr-repository-prefixes "$1" >/dev/null 2>&1 ||
     aws ecr create-pull-through-cache-rule --ecr-repository-prefix "$1" \
       --upstream-registry-url "$2" >/dev/null

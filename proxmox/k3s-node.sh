@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Clone the k3s template into a new agent node with a static IP and join it to the cluster.
-# Usage: K3S_TOKEN=... ./k3s-node.sh VMID NAME IP [CORES] [MEMORY_MB] [DISK]
-#   e.g. K3S_TOKEN=$(cat token) ./k3s-node.sh 260 wrkr-192-168-1-191 192.168.1.191 4 8192 200G
-# Env: TEMPLATE_ID (9024) STORAGE (local-lvm) GATEWAY (192.168.1.254) NAMESERVER (8.8.8.8)
-#      K3S_URL (https://192.168.1.186:6443) K3S_VERSION (v1.36.2+k3s1) CI_USER (christian)
-#      SSH_PUBKEY_FILE (first non-root@ key in ~/.ssh/authorized_keys) SNIPPETS (local:/var/lib/vz/snippets)
-#      CLONE_BWLIMIT KiB/s (102400, keeps etcd on the same disk responsive)
-#      ZONE (Proxmox host short name) -> node label topology.kubernetes.io/zone
 set -euo pipefail
 
 [[ $# -ge 3 ]] || { sed -n '2,8p' "$0"; exit 2; }

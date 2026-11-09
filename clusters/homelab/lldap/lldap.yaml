@@ -1,6 +1,3 @@
-# LLDAP: lightweight LDAP user directory for Authelia.
-# LDAP (3890) is cluster-internal only; the admin web UI is LAN-only at ldap.chrdir.com.
-# Secret "lldap" (jwt_secret, key_seed, admin_password) lives SOPS-encrypted in flux-infra.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -27,7 +24,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate # RWO Longhorn volume
+    type: Recreate
   selector:
     matchLabels: { app.kubernetes.io/name: lldap }
   template:
@@ -55,7 +52,6 @@ spec:
               valueFrom: { secretKeyRef: { name: lldap, key: jwt_secret } }
             - name: LLDAP_KEY_SEED
               valueFrom: { secretKeyRef: { name: lldap, key: key_seed } }
-            # Only used to create the "admin" user on first start; change it in the UI afterwards.
             - name: LLDAP_LDAP_USER_PASS
               valueFrom: { secretKeyRef: { name: lldap, key: admin_password } }
           volumeMounts:

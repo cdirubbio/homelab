@@ -14,7 +14,6 @@ spec:
   install:
     createNamespace: true
   values:
-    # Disable Alertmanager to save memory
     alertmanager:
       enabled: false
     grafana:

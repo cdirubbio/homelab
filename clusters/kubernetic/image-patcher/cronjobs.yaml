@@ -1,6 +1,4 @@
 ---
-# ECR access via Pod Identity (scripts/kubernetic-image-patcher-aws-setup.sh):
-# read scan findings and pull/push poc-e2e/* only.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -12,7 +10,7 @@ kind: CronJob
 metadata:
   name: image-patch-amd64
 spec:
-  schedule: "17 3 * * *"            # daily 03:17 UTC
+  schedule: "17 3 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -37,17 +35,16 @@ spec:
               env:
                 - {name: AWS_REGION, value: us-east-1}
               resources:
-                requests: {cpu: 250m, memory: 768Mi}   # dnf install needs ~600Mi
+                requests: {cpu: 250m, memory: 768Mi}
                 limits: {memory: 1536Mi}
               volumeMounts:
                 - {name: config, mountPath: /config, readOnly: true}
                 - {name: work, mountPath: /work}
           containers:
             - name: build
-              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug  # one-time ECR copy (has a shell)
+              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug
               command: ["/busybox/sh", "/config/patch.sh", "build", "amd64"]
               resources:
-                # Go source rebuilds (sources.txt) compile e.g. agnhost's k8s deps
                 requests: {cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi}
                 limits: {memory: 8Gi, ephemeral-storage: 40Gi}
               volumeMounts:
@@ -64,7 +61,7 @@ kind: CronJob
 metadata:
   name: image-patch-arm64
 spec:
-  schedule: "17 3 * * *"            # daily 03:17 UTC
+  schedule: "17 3 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -89,17 +86,16 @@ spec:
               env:
                 - {name: AWS_REGION, value: us-east-1}
               resources:
-                requests: {cpu: 250m, memory: 768Mi}   # dnf install needs ~600Mi
+                requests: {cpu: 250m, memory: 768Mi}
                 limits: {memory: 1536Mi}
               volumeMounts:
                 - {name: config, mountPath: /config, readOnly: true}
                 - {name: work, mountPath: /work}
           containers:
             - name: build
-              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug  # one-time ECR copy (has a shell)
+              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6-debug
               command: ["/busybox/sh", "/config/patch.sh", "build", "arm64"]
               resources:
-                # Go source rebuilds (sources.txt) compile e.g. agnhost's k8s deps
                 requests: {cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi}
                 limits: {memory: 8Gi, ephemeral-storage: 40Gi}
               volumeMounts:
@@ -111,13 +107,12 @@ spec:
             - {name: work, emptyDir: {}}
             - {name: docker-config, configMap: {name: kaniko-docker-config}}
 ---
-# Publishes <base>-patch.N indexes once both arch children exist and scan clean.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: image-patch-index
 spec:
-  schedule: "17 5 * * *"            # daily 05:17 UTC, after the builds + scans
+  schedule: "17 5 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -140,14 +135,14 @@ spec:
               env:
                 - {name: AWS_REGION, value: us-east-1}
               resources:
-                requests: {cpu: 250m, memory: 768Mi}   # dnf install needs ~600Mi
+                requests: {cpu: 250m, memory: 768Mi}
                 limits: {memory: 1536Mi}
               volumeMounts:
                 - {name: config, mountPath: /config, readOnly: true}
                 - {name: work, mountPath: /work}
           containers:
             - name: index
-              image: gcr.io/go-containerregistry/crane@sha256:e78770b31258a3846f878036d9c1f63fbe4c871f9f56990bf77fd95c013e3c1b  # :debug (has a shell)
+              image: gcr.io/go-containerregistry/crane@sha256:e78770b31258a3846f878036d9c1f63fbe4c871f9f56990bf77fd95c013e3c1b
               command: ["/busybox/sh", "/config/patch.sh", "index"]
               resources:
                 requests: {cpu: 100m, memory: 128Mi}

@@ -1,48 +1,30 @@
 #!/bin/sh
-# CVE patch rebuilds for poc-e2e/* images (see README.md).
-#
-# State lives entirely in ECR tags:
-#   <base>                 mirrored version (index), children <base>_<arch>
-#   <base>-patch.N_<arch>  patched child built by the per-arch CronJobs
-#   <base>-patch.N         index, created by the index CronJob when every
-#                          child exists and it has 0 criticals, or fewer than current
-# "current" = highest published <base>-patch.N index, else <base>.
-#
-# Modes:
-#   plan-build <arch>  (amazonlinux: aws, jq)  decide what to rebuild -> /work
-#   build <arch>       (kaniko debug)          build + push /work/plan
-#   plan-index         (amazonlinux: aws, jq)  decide which indexes to publish
-#   index              (crane debug)           push /work/index-plan
 set -eu
 REG=${REG:-774305584254.dkr.ecr.us-east-1.amazonaws.com}
 PREFIX=${PREFIX:-poc-e2e}
 ARCHES="amd64 arm64"
-RETRY_AFTER_SECONDS=${RETRY_AFTER_SECONDS:-$((20 * 3600))}   # a blocked patch gets a fresh N next day
-FORCE_NEW_PATCH=${FORCE_NEW_PATCH:-}  # manual runs: always start a new -patch.N
+RETRY_AFTER_SECONDS=${RETRY_AFTER_SECONDS:-$((20 * 3600))}
+FORCE_NEW_PATCH=${FORCE_NEW_PATCH:-}
 GO_IMAGE=${GO_IMAGE:-public.ecr.aws/docker/library/golang:1.27.3}
 SOURCES=${SOURCES:-/config/sources.txt}
 WORK=${WORK:-/work}
 
 log() { echo "$*" >&2; }
 
-# ---- helpers (amazonlinux modes) ---------------------------------------------
 tools() { [ -n "${SKIP_TOOLS:-}" ] || dnf install -y -q awscli-2 jq >/dev/null; }
 repos() { aws ecr describe-repositories --output json |
   jq -r --arg p "$PREFIX/" '.repositories[].repositoryName | select(startswith($p))'; }
 tags() { aws ecr list-images --repository-name "$1" --filter tagStatus=TAGGED \
   --query 'imageIds[].imageTag' --output text | tr '\t' '\n' | grep -v '^$' || true; }
 bases() { grep -v '_' | grep -v -- '-patch\.' || true; }
-has() { grep -qx -- "$2" "$1"; }               # has <tagfile> <tag>
-max_n() { # max_n <tagfile> <base> <suffix-regex>: highest N of <base>-patch.N<suffix>
+has() { grep -qx -- "$2" "$1"; }
+max_n() {
   b=$(printf '%s' "$2" | sed 's/[.]/\\./g')
   { grep -E "^${b}-patch\.[0-9]+$3\$" "$1" || true; } |
     sed -E "s/^${b}-patch\.([0-9]+).*/\1/" | sort -n | tail -1 | grep . || echo 0
 }
 pushed_epoch() { date -d "$(aws ecr describe-images --repository-name "$1" \
   --image-ids imageTag="$2" --query 'imageDetails[0].imagePushedAt' --output text)" +%s; }
-# criticals <repo> <tag>: prints count, or "pending" if the scan isn't done
-# Counts findings itself: with enhanced scanning, findingSeverityCounts only
-# covers the first page of findings. The CLI auto-paginates and merges pages.
 criticals() {
   if ! out=$(aws ecr describe-image-scan-findings --repository-name "$1" --image-id imageTag="$2" \
       --output json 2>/tmp/scan-err); then
@@ -55,12 +37,11 @@ criticals() {
           | select(.severity == "CRITICAL") ] | length
       else "pending" end' 2>/dev/null | grep . || echo pending
 }
-# state <repo> <base> <tagfile>: sets M (published patch), CUR, K (newest attempt)
 state() {
   M=$(max_n "$3" "$2" ''); if [ "$M" -gt 0 ]; then CUR="$2-patch.$M"; else CUR=$2; fi
   K=0; for a in $ARCHES; do k=$(max_n "$3" "$2" "_$a"); if [ "$k" -gt "$K" ]; then K=$k; fi; done
 }
-image_config() { # image_config <repo> <tag>: the image config JSON
+image_config() {
   m=$(aws ecr batch-get-image --repository-name "$1" --image-ids imageTag="$2" \
     --accepted-media-types application/vnd.oci.image.manifest.v1+json application/vnd.docker.distribution.manifest.v2+json \
     --query 'images[0].imageManifest' --output text)
@@ -68,7 +49,6 @@ image_config() { # image_config <repo> <tag>: the image config JSON
   u=$(aws ecr get-download-url-for-layer --repository-name "$1" --layer-digest "$d" --query downloadUrl --output text)
   curl -sf "$u"
 }
-# source_for <name> <version>: the sources.txt line for this image, if any
 source_for() {
   [ -f "$SOURCES" ] || return 0
   grep -v '^[[:space:]]*#' "$SOURCES" | while read -r n v rest; do
@@ -76,10 +56,6 @@ source_for() {
   done
 }
 
-# go_bumps <repo> <tag>...: "module@vX" for every Go module finding (any
-# severity) that has a fixedInVersion, read fresh from the scan each run.
-# Per module: the highest fixing version across its CVEs (the lowest version
-# that fixes all of them), and only if it is newer than what is compiled in.
 go_bumps() {
   repo=$1; shift
   for t in "$@"; do
@@ -92,9 +68,7 @@ go_bumps() {
   done | while read -r mod have fixes; do
     for f in $(echo "$fixes" | tr ',' ' '); do
       f=v${f#v}; have=v${have#v}
-      # only real releases: skip pre-release / pseudo-versions (v1.2.3-dev.0.2026...)
       case "$f" in *-*) log "  skip $mod $f (pre-release fix version)"; continue;; esac
-      # skip fixes on an older release line than what is compiled in
       if [ "$(printf '%s\n%s\n' "$have" "$f" | sort -V | tail -1)" = "$f" ] && [ "$f" != "$have" ]; then
         echo "$mod $f"
       fi
@@ -140,9 +114,6 @@ plan_build() {
       fi
       name=$(echo "$repo-$base-$N" | tr '/:' '--')
       src=$(source_for "${repo#"$PREFIX"/}" "$base")
-      # The mirrored image may not exist for this arch (upstream is amd64-only).
-      # That's fine when the binary is rebuilt from source onto a fresh base;
-      # otherwise there is nothing to patch for this arch.
       cfgtag="${base}_$arch"
       if ! has /tmp/tags "$cfgtag"; then
         case "$src" in
@@ -156,14 +127,11 @@ plan_build() {
       mkdir -p "$WORK/$name"
       {
         if [ -n "$src" ]; then
-          # shellcheck disable=SC2086
           set -- $src; git=$1 ref=$2 pkg=$3 bin=$4 xflag=$5 newbase=$6
           if [ "$xflag" = - ]; then ld="-s -w"; else ld="-s -w -X $xflag"; fi
           if [ "$newbase" != keep ]; then from=$newbase; fi
-          # Go module fixes from the current image and the newest attempt
           scanned="${CUR}_$arch"
           if [ "$K" -gt "$M" ] && has /tmp/tags "$base-patch.${K}_$arch"; then scanned="$scanned $base-patch.${K}_$arch"; fi
-          # shellcheck disable=SC2086
           bumps=$(go_bumps "$repo" $scanned)
           how="OS packages + $bin rebuilt from $git@$ref with ${GO_IMAGE##*:}"
           echo "FROM $GO_IMAGE AS build"
@@ -171,12 +139,7 @@ plan_build() {
           echo "    && git fetch -q --depth 1 origin $ref && git checkout -q FETCH_HEAD"
           if [ -n "$bumps" ]; then
             how="$how, go get ${bumps% }"
-            # module mode (not vendor/workspace) so the bumped versions are used
             echo "ENV GOWORK=off GOFLAGS=-mod=mod"
-            # Fix versions are minimums: bump one module at a time and skip any
-            # that an earlier bump already raised to (or past) its target, so
-            # nothing is downgraded and dependents can pull newer versions in.
-            # Quoted heredoc: no shell/echo escaping of the loop body.
             echo "ENV BUMPS=\"${bumps% }\""
             cat <<'LOOP'
 RUN cd /src && for mv in $BUMPS; do m=${mv%@*}; v=${mv#*@}; \
@@ -242,8 +205,6 @@ plan_index() {
         crit=$((crit + c))
       done
       if [ $ok != 1 ]; then log "wait    $repo:$tag: children or scans not ready"; continue; fi
-      # Publish if clean, or at least strictly better than the current version
-      # (some CVEs have no fix anywhere yet; don't hold back the ones that do).
       cur_crit=0
       for a in $ARCHES; do
         if has /tmp/tags "${CUR}_$a"; then
@@ -264,7 +225,6 @@ index() {
   [ -s "$WORK/index-plan" ] || { echo "nothing to publish"; exit 0; }
   while read -r repo tag; do
     m=""; for a in $ARCHES; do m="$m -m $REG/$repo:${tag}_$a"; done
-    # shellcheck disable=SC2086
     crane index append $m -t "$REG/$repo:$tag"
     echo "published $REG/$repo:$tag"
   done < "$WORK/index-plan"

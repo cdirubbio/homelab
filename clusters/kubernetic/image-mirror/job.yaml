@@ -1,6 +1,4 @@
 ---
-# ECR access comes from a Pod Identity association on this ServiceAccount
-# (scripts/kubernetic-image-mirror-aws-setup.sh), limited to poc-e2e/* repos.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -12,7 +10,6 @@ kind: Job
 metadata:
   name: image-mirror
   annotations:
-    # Jobs are immutable; let Flux delete + recreate it when the spec changes.
     kustomize.toolkit.fluxcd.io/force: enabled
 spec:
   backoffLimit: 1
@@ -39,7 +36,7 @@ spec:
             - {name: shared, mountPath: /shared}
       containers:
         - name: copy
-          image: gcr.io/go-containerregistry/crane@sha256:e78770b31258a3846f878036d9c1f63fbe4c871f9f56990bf77fd95c013e3c1b  # :debug (has a shell)
+          image: gcr.io/go-containerregistry/crane@sha256:e78770b31258a3846f878036d9c1f63fbe4c871f9f56990bf77fd95c013e3c1b
           command: ["/busybox/sh", "/config/mirror.sh", "copy"]
           resources:
             requests: {cpu: 250m, memory: 256Mi}

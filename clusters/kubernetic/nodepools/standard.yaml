@@ -1,12 +1,4 @@
 ---
-# Nodes in every /20 subnet of vpc-0e3dacf511fcd2a94, public and private.
-#   private (NAT egress): 172.31.96.0/20 (1a), 100.64.48.0/20 (1b)
-#   public  (IGW egress): 172.31.0.0/20 (1a), 172.31.16.0/20 (1c),
-#     172.31.32.0/20 (1d), 172.31.48.0/20 (1e), 172.31.64.0/20 (1f),
-#     172.31.80.0/20 (1b)
-# Public-subnet nodes get a public IP (subnet default) because those subnets
-# have no NAT; the node security group only allows inbound from itself, so they
-# are not reachable from the internet.
 apiVersion: eks.amazonaws.com/v1
 kind: NodeClass
 metadata:
@@ -14,31 +6,27 @@ metadata:
 spec:
   role: AmazonEKSAutoNodeRole
   subnetSelectorTerms:
-    - id: subnet-0b045048389a1ba95   # 172.31.96.0/20  private 1a
-    - id: subnet-055ef85eee70f0dfe   # 100.64.48.0/20  private 1b
-    - id: subnet-07f3f11f322be406d   # 172.31.0.0/20   public  1a
-    - id: subnet-094c4e8b06d501d72   # 172.31.16.0/20  public  1c
-    - id: subnet-00da67ad9e9dc4d5b   # 172.31.32.0/20  public  1d
-    - id: subnet-0406cf0910cafe58e   # 172.31.48.0/20  public  1e
-    - id: subnet-02552135b552f974c   # 172.31.64.0/20  public  1f
-    - id: subnet-0b08a759ea6e3efa1   # 172.31.80.0/20  public  1b
+    - id: subnet-0b045048389a1ba95
+    - id: subnet-055ef85eee70f0dfe
+    - id: subnet-07f3f11f322be406d
+    - id: subnet-094c4e8b06d501d72
+    - id: subnet-00da67ad9e9dc4d5b
+    - id: subnet-0406cf0910cafe58e
+    - id: subnet-02552135b552f974c
+    - id: subnet-0b08a759ea6e3efa1
   securityGroupSelectorTerms:
-    - id: sg-0604e94232884f62e       # cluster security group
-  # gp3 root volume. Default is 80Gi / 3000 IOPS / 125 MiB/s; builds request
-  # 10Gi each, so 160Gi fits ~15 builds per node instead of 7.
+    - id: sg-0604e94232884f62e
   ephemeralStorage:
     size: 160Gi
-    iops: 6000                       # max 16000
-    throughput: 500                  # MiB/s, max 1000
+    iops: 6000
+    throughput: 500
 ---
-# Single general pool: amd64 and arm64 (Graviton). Workloads whose image is
-# single-arch must set a kubernetes.io/arch nodeSelector (the build CronJobs do).
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: standard
 spec:
-  weight: 50                         # preferred over the built-in pools
+  weight: 50
   template:
     spec:
       nodeClassRef:
@@ -53,7 +41,7 @@ spec:
         - {key: eks.amazonaws.com/instance-generation, operator: Gt, values: ["4"]}
       expireAfter: 336h
   limits:
-    cpu: "1500"                      # account on-demand vCPU quota is 2030
+    cpu: "1500"
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 1m

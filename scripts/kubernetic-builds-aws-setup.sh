@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# One-time AWS setup for Kaniko builds on the kubernetic EKS Auto Mode cluster.
-# See clusters/kubernetic/builds/README.md. Safe to re-run (skips what exists).
-#
-# Creates:
-#   - ECR repos: subdc/backend, subdc/backend-cache (scan on push, lifecycle rules)
-#   - ECR repo ghcr/osscontainertools/kaniko holding a one-time copy of the
-#     Kaniko image, so nodes pull it from ECR instead of ghcr.io
-#   - IAM role kaniko-builds (Pod Identity trust scoped to this cluster) with
-#     push/pull limited to subdc/* repos
-#   - Pod Identity association builds/kaniko -> kaniko-builds
-#
-# Needs: aws CLI (admin in 774305584254), crane.
 set -euo pipefail
 
 ACCOUNT_ID=774305584254
@@ -22,7 +10,7 @@ KANIKO_SRC=ghcr.io/osscontainertools/kaniko:v1.28.6
 KANIKO_REPO=ghcr/osscontainertools/kaniko
 export AWS_REGION=$REGION
 
-ensure_repo() { # name
+ensure_repo() {
   aws ecr describe-repositories --repository-names "$1" >/dev/null 2>&1 ||
     aws ecr create-repository --repository-name "$1" \
       --image-scanning-configuration scanOnPush=true \
@@ -30,7 +18,6 @@ ensure_repo() { # name
   echo "repo ok: $1"
 }
 
-# --- ECR ---------------------------------------------------------------------
 ensure_repo subdc/backend
 ensure_repo subdc/backend-cache
 ensure_repo "$KANIKO_REPO"
@@ -41,11 +28,9 @@ aws ecr put-lifecycle-policy --repository-name subdc/backend-cache --lifecycle-p
   '{"rules":[{"rulePriority":1,"description":"expire cache layers after 14d","selection":{"tagStatus":"any","countType":"sinceImagePushed","countUnit":"days","countNumber":14},"action":{"type":"expire"}}]}' >/dev/null
 echo "lifecycle policies ok"
 
-# --- One-time copy of the Kaniko image (all architectures) ---------------------
 aws ecr get-login-password | crane auth login "$REGISTRY" -u AWS --password-stdin
 crane copy "$KANIKO_SRC" "$REGISTRY/$KANIKO_REPO:${KANIKO_SRC##*:}"
 
-# --- IAM role for Pod Identity -----------------------------------------------
 TRUST=$(cat <<JSON
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
  "Principal":{"Service":"pods.eks.amazonaws.com"},
@@ -74,7 +59,6 @@ JSON
 )"
 echo "role ok: $ROLE"
 
-# --- Pod Identity association (needs the cluster ACTIVE) ------------------------
 echo "waiting for $CLUSTER to be ACTIVE..."
 aws eks wait cluster-active --name "$CLUSTER"
 EXISTING=$(aws eks list-pod-identity-associations --cluster-name "$CLUSTER" \

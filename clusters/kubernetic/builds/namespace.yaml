@@ -1,9 +1,4 @@
 ---
-# Namespace + identity for in-cluster container image builds (Kaniko).
-#
-# Kaniko runs as root *inside* its container but needs no privileged mode,
-# no extra capabilities and no host mounts, so the namespace can enforce the
-# Pod Security "baseline" profile.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -12,9 +7,6 @@ metadata:
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/warn: baseline
 ---
-# ECR push access comes from an EKS Pod Identity association on this
-# ServiceAccount (created on the AWS side, see README.md). The Pod Identity
-# webhook injects its own token, so the Kubernetes API token is not mounted.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -22,9 +14,6 @@ metadata:
   namespace: builds
 automountServiceAccountToken: false
 ---
-# Docker config telling Kaniko to use the bundled ECR credential helper
-# (docker-credential-ecr-login) for your ECR registry only. Other registries
-# (e.g. Docker Hub base images) are pulled anonymously.
 apiVersion: v1
 kind: ConfigMap
 metadata:

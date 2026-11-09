@@ -1,4 +1,3 @@
-# Generated from github.com/cdirubbio/cdhyp deploy/ (kubectl kustomize). Secrets live SOPS-encrypted in flux-infra.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -71,14 +70,12 @@ spec:
     image: alpine:3.22
     name: clone
     script: |
-      #!/bin/sh
       set -eu
       case "$REVISION" in
         *[!0-9a-f]*|"") echo "refusing to build non-SHA revision: $REVISION"; exit 1 ;;
       esac
       apk add --no-cache -q git openssh-client ca-certificates
       cp /etc/ssl/certs/ca-certificates.crt /ca-certs/ca-certificates.crt
-      # Pinned GitHub host key (https://api.github.com/meta).
       echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > /tmp/known_hosts
       export GIT_SSH_COMMAND="ssh -i /etc/deploy-key/ssh-privatekey -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/known_hosts -o StrictHostKeyChecking=yes"
       cd /src

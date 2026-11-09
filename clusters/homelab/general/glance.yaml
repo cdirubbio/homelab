@@ -115,7 +115,7 @@ data:
 
               - type: videos
                 channels:
-                  - UCHnyfMqiRRG1u-2MsSQLbXA # Veritasium
+                  - UCHnyfMqiRRG1u-2MsSQLbXA
 
           - size: small
             widgets:

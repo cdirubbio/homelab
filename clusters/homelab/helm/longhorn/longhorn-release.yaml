@@ -21,7 +21,5 @@ spec:
     longhornUI:
       replicas: 1
     defaultSettings:
-      # Force-delete StatefulSet/Deployment pods stuck on a NotReady node so they
-      # reschedule and their Longhorn volumes can attach elsewhere.
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       concurrentAutomaticEngineUpgradePerNodeLimit: 1

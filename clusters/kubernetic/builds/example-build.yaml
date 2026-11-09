@@ -1,22 +1,12 @@
 ---
-# Example Kaniko build: copy this file once per image you want to build.
-#
-# It is a CronJob so that it is
-#   - GitOps friendly (Jobs are immutable; a CronJob can be edited by Flux),
-#   - rebuilt on a schedule (picks up base-image security fixes),
-#   - runnable on demand:
-#       kubectl -n builds create job --from=cronjob/build-example build-example-manual
-#
-# Shipped with `suspend: true` so it does nothing until you point it at a real
-# repo and set up ECR + Pod Identity (see README.md).
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: build-example
   namespace: builds
 spec:
-  suspend: true                     # flip to false once configured
-  schedule: "17 4 * * 0"            # weekly, Sunday 04:17 UTC
+  suspend: true
+  schedule: "17 4 * * 0"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
@@ -33,31 +23,22 @@ spec:
         spec:
           serviceAccountName: kaniko
           restartPolicy: Never
-          # Kaniko builds for the node's architecture, so pin it. The built-in
-          # Auto Mode general-purpose NodePool is amd64 only; arm64 needs a
-          # custom NodePool.
           nodeSelector:
             kubernetes.io/arch: amd64
           containers:
             - name: kaniko
-              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6  # one-time copy of ghcr.io/osscontainertools/kaniko (scripts/kubernetic-builds-aws-setup.sh)
+              image: 774305584254.dkr.ecr.us-east-1.amazonaws.com/ghcr/osscontainertools/kaniko:v1.28.6
               args:
-                # Build context straight from git. Format:
-                #   git://<host>/<owner>/<repo>.git#refs/heads/<branch>
                 - --context=git://github.com/cdirubbio/CHANGE-ME.git#refs/heads/main
-                - --context-sub-path=.          # folder holding the Dockerfile
+                - --context-sub-path=.
                 - --dockerfile=Dockerfile
                 - --destination=774305584254.dkr.ecr.us-east-1.amazonaws.com/CHANGE-ME:latest
-                # Layer cache stored in ECR, so rebuilds are fast.
                 - --cache=true
                 - --cache-repo=774305584254.dkr.ecr.us-east-1.amazonaws.com/CHANGE-ME-cache
                 - --snapshot-mode=redo
-                - --compressed-caching=false    # lower memory use
-                # Pull Docker Hub base images from ECR Public's mirror instead
-                # (no anonymous rate limit); falls back to Docker Hub if missing.
+                - --compressed-caching=false
                 - --registry-map=index.docker.io=public.ecr.aws/docker
               env:
-                # Only needed when the source repo is private.
                 - name: GIT_USERNAME
                   valueFrom:
                     secretKeyRef:

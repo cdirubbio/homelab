@@ -19,7 +19,4 @@ spec:
   values:
     installCRDs: true
     operator:
-      # The default "basic" profile also installs Chains and Results (Results needs
-      # its own Postgres). We declare our own TektonConfig instead; see
-      # tektonconfig.yaml in this folder.
       autoInstallComponents: false

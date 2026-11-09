@@ -3,8 +3,6 @@ kind: Kustomization
 namespace: builds
 resources:
   - job.yaml
-# Hash suffix changes whenever images.txt or mirror.sh changes, which changes
-# the Job spec, so Flux recreates (re-runs) the Job.
 configMapGenerator:
   - name: image-mirror
     files:

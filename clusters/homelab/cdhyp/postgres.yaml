@@ -1,4 +1,3 @@
-# Generated from github.com/cdirubbio/cdhyp deploy/ (kubectl kustomize). Secrets live SOPS-encrypted in flux-infra.
 apiVersion: v1
 kind: Service
 metadata:
