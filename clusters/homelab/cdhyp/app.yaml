@@ -4,6 +4,43 @@ kind: Namespace
 metadata:
   name: cdhyp
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cdhyp-ci-rollout
+  namespace: cdhyp
+rules:
+- apiGroups:
+  - apps
+  resourceNames:
+  - cdhyp
+  resources:
+  - deployments
+  verbs:
+  - get
+  - watch
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cdhyp-ci-rollout
+  namespace: cdhyp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cdhyp-ci-rollout
+subjects:
+- kind: ServiceAccount
+  name: cdhyp-build
+  namespace: cdhyp-ci
+---
 apiVersion: v1
 data:
   AUTH_MODE: oidc

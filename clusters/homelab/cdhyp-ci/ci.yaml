@@ -5,7 +5,6 @@ metadata:
   name: cdhyp-ci
 ---
 apiVersion: v1
-automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   name: cdhyp-build
@@ -59,6 +58,10 @@ spec:
     name: repo-url
   - default: harbor.chrdir.com/harborian/cdhyp
     name: image
+  - default: cdhyp
+    name: deploy-namespace
+  - default: cdhyp
+    name: deployment
   steps:
   - env:
     - name: REVISION
@@ -121,6 +124,27 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ca-certs
       readOnly: true
+  - args:
+    - -n
+    - $(params.deploy-namespace)
+    - rollout
+    - restart
+    - deployment/$(params.deployment)
+    command:
+    - /bin/kubectl
+    image: registry.k8s.io/kubectl:v1.37.2
+    name: rollout-restart
+  - args:
+    - -n
+    - $(params.deploy-namespace)
+    - rollout
+    - status
+    - deployment/$(params.deployment)
+    - --timeout=5m
+    command:
+    - /bin/kubectl
+    image: registry.k8s.io/kubectl:v1.37.2
+    name: rollout-status
   volumes:
   - emptyDir: {}
     name: src
