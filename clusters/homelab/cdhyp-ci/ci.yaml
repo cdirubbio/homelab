@@ -1,0 +1,209 @@
+# Generated from github.com/cdirubbio/cdhyp deploy/ (kubectl kustomize). Secrets live SOPS-encrypted in flux-infra.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cdhyp-ci
+---
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  name: cdhyp-build
+  namespace: cdhyp-ci
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdhyp-triggers
+  namespace: cdhyp-ci
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cdhyp-triggers-eventlistener
+  namespace: cdhyp-ci
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-roles
+subjects:
+- kind: ServiceAccount
+  name: cdhyp-triggers
+  namespace: cdhyp-ci
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cdhyp-triggers-eventlistener-clusterroles
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tekton-triggers-eventlistener-clusterroles
+subjects:
+- kind: ServiceAccount
+  name: cdhyp-triggers
+  namespace: cdhyp-ci
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cdhyp-build-push
+  namespace: cdhyp-ci
+spec:
+  description: Clone a commit of the private cdhyp repo and build/push it to Harbor
+    with Kaniko.
+  params:
+  - description: Git commit SHA to build
+    name: revision
+  - default: git@github.com:cdirubbio/cdhyp.git
+    name: repo-url
+  - default: harbor.chrdir.com/harborian/cdhyp
+    name: image
+  steps:
+  - env:
+    - name: REVISION
+      value: $(params.revision)
+    - name: REPO_URL
+      value: $(params.repo-url)
+    image: alpine:3.20
+    name: clone
+    script: |
+      #!/bin/sh
+      set -eu
+      case "$REVISION" in
+        *[!0-9a-f]*|"") echo "refusing to build non-SHA revision: $REVISION"; exit 1 ;;
+      esac
+      apk add --no-cache -q git openssh-client
+      # Pinned GitHub host key (https://api.github.com/meta).
+      echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > /tmp/known_hosts
+      export GIT_SSH_COMMAND="ssh -i /etc/deploy-key/ssh-privatekey -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/known_hosts -o StrictHostKeyChecking=yes"
+      cd /src
+      git init -q
+      git fetch -q --depth 1 "$REPO_URL" "$REVISION"
+      git checkout -q FETCH_HEAD
+      git log -1 --format='building %H: %s'
+    volumeMounts:
+    - mountPath: /src
+      name: src
+    - mountPath: /etc/deploy-key
+      name: deploy-key
+      readOnly: true
+  - args:
+    - --context=dir:///src
+    - --dockerfile=/src/Dockerfile
+    - --destination=$(params.image):$(params.revision)
+    - --destination=$(params.image):latest
+    - --cache=true
+    - --cache-repo=$(params.image)-cache
+    - --snapshot-mode=redo
+    - --label=org.opencontainers.image.revision=$(params.revision)
+    - --label=org.opencontainers.image.source=$(params.repo-url)
+    computeResources:
+      limits:
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    env:
+    - name: DOCKER_CONFIG
+      value: /kaniko/.docker
+    image: gcr.io/kaniko-project/executor:v1.23.2
+    name: build-push
+    volumeMounts:
+    - mountPath: /src
+      name: src
+    - mountPath: /kaniko/.docker
+      name: harbor-push
+      readOnly: true
+  volumes:
+  - emptyDir: {}
+    name: src
+  - name: deploy-key
+    secret:
+      defaultMode: 256
+      secretName: github-deploy-key
+  - name: harbor-push
+    secret:
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+      secretName: harbor-push
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: cdhyp
+  namespace: cdhyp-ci
+spec:
+  resources:
+    kubernetesResource:
+      spec:
+        template:
+          spec:
+            containers:
+            - resources:
+                limits:
+                  memory: 128Mi
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+  serviceAccountName: cdhyp-triggers
+  triggers:
+  - bindings:
+    - ref: cdhyp-github-push
+    interceptors:
+    - params:
+      - name: secretRef
+        value:
+          secretKey: secret
+          secretName: github-webhook
+      - name: eventTypes
+        value:
+        - push
+      ref:
+        kind: ClusterInterceptor
+        name: github
+    - params:
+      - name: filter
+        value: body.ref == 'refs/heads/main' && body.repository.full_name == 'cdirubbio/cdhyp'
+          && !body.deleted
+      ref:
+        kind: ClusterInterceptor
+        name: cel
+    name: github-push-main
+    template:
+      ref: cdhyp-build
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: cdhyp-github-push
+  namespace: cdhyp-ci
+spec:
+  params:
+  - name: revision
+    value: $(body.after)
+---
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: cdhyp-build
+  namespace: cdhyp-ci
+spec:
+  params:
+  - name: revision
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    metadata:
+      generateName: cdhyp-build-
+      labels:
+        app.kubernetes.io/part-of: cdhyp-ci
+    spec:
+      params:
+      - name: revision
+        value: $(tt.params.revision)
+      serviceAccountName: cdhyp-build
+      taskRef:
+        name: cdhyp-build-push
+      timeout: 30m

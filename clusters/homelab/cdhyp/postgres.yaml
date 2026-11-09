@@ -1,0 +1,93 @@
+# Generated from github.com/cdirubbio/cdhyp deploy/ (kubectl kustomize). Secrets live SOPS-encrypted in flux-infra.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: cdhyp
+spec:
+  ports:
+  - name: pg
+    port: 5432
+    targetPort: pg
+  selector:
+    app.kubernetes.io/name: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: cdhyp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  serviceName: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+    spec:
+      containers:
+      - env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        envFrom:
+        - secretRef:
+            name: postgres
+        image: postgres:17-alpine
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        name: postgres
+        ports:
+        - containerPort: 5432
+          name: pg
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+        - mountPath: /var/run/postgresql
+          name: run
+      securityContext:
+        fsGroup: 70
+        runAsGroup: 70
+        runAsNonRoot: true
+        runAsUser: 70
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - emptyDir: {}
+        name: run
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: longhorn
