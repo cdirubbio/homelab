@@ -56,6 +56,9 @@ data:
     storage:
       type: memory
 
+    ui:
+      default-sort-by: group
+
     endpoints:
       - name: Proxmox VE PVE
         group: Infrastructure
