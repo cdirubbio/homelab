@@ -52,7 +52,7 @@ spec:
             mountPath: /data
       - name: docmost
         image: docmost/docmost:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
           - containerPort: 3000
         env:

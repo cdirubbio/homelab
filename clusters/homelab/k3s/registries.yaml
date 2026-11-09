@@ -1,0 +1,26 @@
+mirrors:
+  docker.io:
+    endpoint:
+      - "https://harbor.chrdir.com"
+    rewrite:
+      "^(.*)$": "dockerhub/$1"
+  quay.io:
+    endpoint:
+      - "https://harbor.chrdir.com"
+    rewrite:
+      "^(.*)$": "quay/$1"
+  ghcr.io:
+    endpoint:
+      - "https://harbor.chrdir.com"
+    rewrite:
+      "^(.*)$": "ghcr/$1"
+  registry.k8s.io:
+    endpoint:
+      - "https://harbor.chrdir.com"
+    rewrite:
+      "^(.*)$": "k8s/$1"
+  lscr.io:
+    endpoint:
+      - "https://harbor.chrdir.com"
+    rewrite:
+      "^(.*)$": "lscr/$1"

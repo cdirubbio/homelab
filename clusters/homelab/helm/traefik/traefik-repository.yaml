@@ -6,5 +6,5 @@ metadata:
 spec:
   interval: 10m
   ref:
-    semver: "41.0.x"
+    semver: "42.x"
   url: oci://ghcr.io/traefik/helm/traefik
