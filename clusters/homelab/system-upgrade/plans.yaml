@@ -4,7 +4,7 @@ metadata:
   name: k3s-server
   namespace: system-upgrade
 spec:
-  version: v1.36.6+k3s1
+  channel: https://update.k3s.io/v1-release/channels/stable
   concurrency: 1
   cordon: true
   serviceAccountName: system-upgrade
@@ -24,7 +24,7 @@ metadata:
   name: k3s-agent
   namespace: system-upgrade
 spec:
-  version: v1.36.6+k3s1
+  channel: https://update.k3s.io/v1-release/channels/stable
   concurrency: 1
   cordon: true
   serviceAccountName: system-upgrade
