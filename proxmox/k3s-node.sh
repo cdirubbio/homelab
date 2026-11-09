@@ -6,6 +6,7 @@
 #      K3S_URL (https://192.168.1.186:6443) K3S_VERSION (v1.36.2+k3s1) CI_USER (christian)
 #      SSH_PUBKEY_FILE (first non-root@ key in ~/.ssh/authorized_keys) SNIPPETS (local:/var/lib/vz/snippets)
 #      CLONE_BWLIMIT KiB/s (102400, keeps etcd on the same disk responsive)
+#      ZONE (Proxmox host short name) -> node label topology.kubernetes.io/zone
 set -euo pipefail
 
 [[ $# -ge 3 ]] || { sed -n '2,8p' "$0"; exit 2; }
@@ -19,6 +20,7 @@ NAMESERVER=${NAMESERVER:-8.8.8.8}
 K3S_URL=${K3S_URL:-https://192.168.1.186:6443}
 K3S_VERSION=${K3S_VERSION:-v1.36.2+k3s1}
 CI_USER=${CI_USER:-christian}
+ZONE=${ZONE:-$(hostname -s)}
 SNIPPETS=${SNIPPETS:-local:/var/lib/vz/snippets}
 SNIPPET_STORE=${SNIPPETS%%:*}
 SNIPPET_DIR=${SNIPPETS#*:}
@@ -49,9 +51,9 @@ mkdir -p "$SNIPPET_DIR"
 SNIPPET=$VMID-k3s-agent.yaml
 
 REGISTRIES_YAML=$(sed 's/^/      /' "$REGISTRIES")
-export NODE_NAME CI_USER SSH_PUBKEY K3S_URL K3S_TOKEN K3S_VERSION REGISTRIES_YAML
+export NODE_NAME CI_USER SSH_PUBKEY K3S_URL K3S_TOKEN K3S_VERSION REGISTRIES_YAML ZONE
 umask 077
-envsubst '${NODE_NAME} ${CI_USER} ${SSH_PUBKEY} ${K3S_URL} ${K3S_TOKEN} ${K3S_VERSION} ${REGISTRIES_YAML}' \
+envsubst '${NODE_NAME} ${CI_USER} ${SSH_PUBKEY} ${K3S_URL} ${K3S_TOKEN} ${K3S_VERSION} ${REGISTRIES_YAML} ${ZONE}' \
   < "$USERDATA_TEMPLATE" > "$SNIPPET_DIR/$SNIPPET"
 
 qm clone "$TEMPLATE_ID" "$VMID" --name "$NODE_NAME" --full 1 --storage "$STORAGE" --bwlimit "${CLONE_BWLIMIT:-102400}"

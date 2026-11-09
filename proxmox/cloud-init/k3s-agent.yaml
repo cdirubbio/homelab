@@ -21,6 +21,8 @@ write_files:
     content: |
       server: ${K3S_URL}
       token: ${K3S_TOKEN}
+      node-label:
+        - topology.kubernetes.io/zone=${ZONE}
   - path: /etc/rancher/k3s/registries.yaml
     permissions: "0600"
     content: |
