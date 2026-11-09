@@ -95,8 +95,6 @@ spec:
             path: /healthz
             port: http
           periodSeconds: 2
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         runAsGroup: 65532
         runAsNonRoot: true
