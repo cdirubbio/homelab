@@ -103,6 +103,24 @@ spec:
                 - code
               token_endpoint_auth_method: client_secret_basic
 
+            - client_id: cdhyp
+              client_name: cdhyp
+              client_secret:
+                path: /secrets/authelia-oidc/cdhyp.digest
+              authorization_policy: two_factor
+              require_pkce: true
+              pkce_challenge_method: S256
+              redirect_uris:
+                - https://cdhyp.dirubbio.com/auth/callback
+              scopes:
+                - openid
+                - profile
+                - email
+              grant_types:
+                - authorization_code
+              response_types:
+                - code
+              token_endpoint_auth_method: client_secret_basic
       access_control:
         default_policy: deny
         rules:
