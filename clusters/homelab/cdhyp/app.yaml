@@ -47,7 +47,8 @@ data:
   LOG_LEVEL: info
   OIDC_CLIENT_ID: cdhyp
   OIDC_ISSUER: https://auth.dirubbio.com
-  OIDC_SCOPES: openid profile email
+  OIDC_SCOPES: openid profile email groups
+  ADMIN_GROUP: lldap_admin
   SESSION_TTL: 720h
 kind: ConfigMap
 metadata:
