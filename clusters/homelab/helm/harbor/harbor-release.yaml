@@ -25,7 +25,7 @@ spec:
     persistence:
       persistentVolumeClaim:
         registry:
-          size: 75Gi
+          size: 30Gi
     expose:
       type: ingress
       tls:
