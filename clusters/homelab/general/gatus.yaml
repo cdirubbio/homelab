@@ -57,57 +57,81 @@ data:
       type: memory
 
     endpoints:
-      - name: Docmost
-        url: http://docmost.default.svc.cluster.local:3000
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: Glance
-        url: http://glance.default.svc.cluster.local:8080
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: Grafana
-        url: http://kps-grafana.monitoring.svc.cluster.local
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: Headlamp
-        url: http://my-headlamp.kube-system.svc.cluster.local
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: Authelia
-        url: http://authelia.authelia.svc.cluster.local/api/health
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-          - "[BODY].status == OK"
-
-      - name: Nginx Proxy Manager
-        url: https://npm.chrdir.com.
-        interval: 60s
-        conditions:
-          - "[STATUS] == 200"
-
       - name: Proxmox VE PVE
+        group: Infrastructure
         url: https://pve.chrdir.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
       - name: Proxmox VE PVEN
+        group: Infrastructure
         url: https://pven.chrdir.com.
         interval: 60s
         conditions:
           - "[STATUS] == 200"
 
+      - name: Nginx Proxy Manager
+        group: Infrastructure
+        url: https://npm.chrdir.com.
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Authelia
+        group: Infrastructure
+        url: http://authelia.authelia.svc.cluster.local/api/health
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+          - "[BODY].status == OK"
+
+      - name: Headlamp
+        group: Kubernetes
+        url: http://my-headlamp.kube-system.svc.cluster.local
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Grafana
+        group: Kubernetes
+        url: http://kps-grafana.monitoring.svc.cluster.local
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
       - name: Longhorn
+        group: Kubernetes
         url: https://longhorn.chrdir.com./#/dashboard
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Harbor
+        group: Kubernetes
+        url: http://harbor-core.harbor.svc.cluster.local/api/v2.0/health
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+          - "[BODY].status == healthy"
+
+      - name: Prometheus
+        group: Kubernetes
+        url: http://kps-kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Docmost
+        group: Applications
+        url: http://docmost.default.svc.cluster.local:3000
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Glance
+        group: Applications
+        url: http://glance.default.svc.cluster.local:8080
         interval: 60s
         conditions:
           - "[STATUS] == 200"

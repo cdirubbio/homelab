@@ -91,6 +91,12 @@ data:
                       - title: Longhorn
                         url: https://longhorn.chrdir.com
                         icon: si:longhorn
+                      - title: Harbor
+                        url: https://harbor.chrdir.com
+                        icon: si:harbor
+                      - title: Prometheus
+                        url: https://prometheus.chrdir.com
+                        icon: si:prometheus
 
                   - title: Applications
                     links:
