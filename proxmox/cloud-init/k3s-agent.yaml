@@ -1,0 +1,42 @@
+#cloud-config
+hostname: ${NODE_NAME}
+manage_etc_hosts: true
+
+users:
+  - name: ${CI_USER}
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${SSH_PUBKEY}
+ssh_pwauth: false
+
+package_update: true
+package_upgrade: true
+
+write_files:
+  - path: /etc/rancher/k3s/config.yaml
+    permissions: "0600"
+    content: |
+      server: ${K3S_URL}
+      token: ${K3S_TOKEN}
+  - path: /etc/rancher/k3s/registries.yaml
+    permissions: "0600"
+    content: |
+${REGISTRIES_YAML}
+  - path: /etc/multipath.conf
+    content: |
+      blacklist {
+          devnode "^sd[a-z0-9]+"
+      }
+  - path: /etc/sysctl.d/90-k8s.conf
+    content: |
+      fs.inotify.max_user_instances = 8192
+      fs.inotify.max_user_watches = 1048576
+
+runcmd:
+  - [sysctl, --system]
+  - [sh, -c, "systemctl restart multipathd 2>/dev/null || true"]
+  - [systemctl, enable, --now, iscsid, qemu-guest-agent]
+  - [sh, -c, "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${K3S_VERSION}' INSTALL_K3S_EXEC=agent sh -"]

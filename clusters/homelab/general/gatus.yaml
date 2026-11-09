@@ -75,6 +75,19 @@ data:
         conditions:
           - "[STATUS] == 200"
 
+      - name: Headlamp
+        url: http://my-headlamp.kube-system.svc.cluster.local
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Authelia
+        url: http://authelia.authelia.svc.cluster.local/api/health
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+          - "[BODY].status == OK"
+
       - name: Nginx Proxy Manager
         url: https://npm.chrdir.com.
         interval: 60s

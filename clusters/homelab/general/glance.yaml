@@ -64,20 +64,25 @@ data:
                 groups:
                   - title: Infrastructure
                     links:
-                      - title: Proxmox
+                      - title: Proxmox (pve)
                         url: https://pve.chrdir.com
                         icon: si:proxmox
-
+                      - title: Proxmox (pven)
+                        url: https://pven.chrdir.com
+                        icon: si:proxmox
                       - title: Gatus
                         url: https://gatus.chrdir.com
                         icon: si:statuspal
                       - title: Nginx Proxy Manager
                         url: https://npm.chrdir.com
                         icon: si:nginxproxymanager
-                  
+                      - title: Authelia
+                        url: https://auth.dirubbio.com
+                        icon: si:authelia
+
                   - title: Kubernetes
                     links:
-                      - title: Kubernetes Dashboard
+                      - title: Headlamp
                         url: https://k8s.dirubbio.com
                         icon: si:kubernetes
                       - title: Grafana
@@ -92,10 +97,6 @@ data:
                       - title: Docmost
                         url: https://docmost.dirubbio.com
                         icon: si:readthedocs
-
-                      - title: OwnCloud
-                        url: https://owncloud.dirubbio.com
-                        icon: si:owncloud
 
                       - title: Glance
                         url: https://glance.dirubbio.com
