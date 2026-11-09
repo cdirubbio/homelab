@@ -1,0 +1,111 @@
+# LLDAP: lightweight LDAP user directory for Authelia.
+# LDAP (3890) is cluster-internal only; the admin web UI is LAN-only at ldap.chrdir.com.
+# Secret "lldap" (jwt_secret, key_seed, admin_password) lives SOPS-encrypted in flux-infra.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lldap
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lldap-data
+  namespace: lldap
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lldap
+  namespace: lldap
+  labels: { app.kubernetes.io/name: lldap }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO Longhorn volume
+  selector:
+    matchLabels: { app.kubernetes.io/name: lldap }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: lldap }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: lldap
+          image: lldap/lldap:v0.6.3-alpine-rootless
+          ports:
+            - { name: ldap, containerPort: 3890 }
+            - { name: http, containerPort: 17170 }
+          env:
+            - { name: TZ, value: America/Los_Angeles }
+            - { name: LLDAP_LDAP_BASE_DN, value: "dc=chrdir,dc=com" }
+            - { name: LLDAP_HTTP_URL, value: "https://ldap.chrdir.com" }
+            - name: LLDAP_JWT_SECRET
+              valueFrom: { secretKeyRef: { name: lldap, key: jwt_secret } }
+            - name: LLDAP_KEY_SEED
+              valueFrom: { secretKeyRef: { name: lldap, key: key_seed } }
+            # Only used to create the "admin" user on first start; change it in the UI afterwards.
+            - name: LLDAP_LDAP_USER_PASS
+              valueFrom: { secretKeyRef: { name: lldap, key: admin_password } }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            tcpSocket: { port: ldap }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lldap-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lldap
+  namespace: lldap
+spec:
+  selector: { app.kubernetes.io/name: lldap }
+  ports:
+    - { name: ldap, port: 3890, targetPort: ldap }
+    - { name: http, port: 17170, targetPort: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lldap
+  namespace: lldap
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [ldap.chrdir.com]
+      secretName: lldap-tls
+  rules:
+    - host: ldap.chrdir.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: lldap, port: { name: http } }
