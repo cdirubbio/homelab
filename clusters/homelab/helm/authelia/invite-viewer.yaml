@@ -1,0 +1,30 @@
+# Serves Authelia's filesystem-notifier output (/config/notification.txt) as
+# plain text. Nginx Proxy Manager proxies invite.dirubbio.com -> <node>:30092
+# with an access list in front. The sidecar itself is in authelia-release.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authelia-invite-viewer
+  namespace: authelia
+data:
+  # busybox httpd runs /cgi-bin/index.cgi for "/" when there's no index.html.
+  index.cgi: |
+    #!/bin/sh
+    printf 'Content-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nX-Robots-Tag: noindex\r\n\r\n'
+    cat /config/notification.txt 2>/dev/null || echo "No notifications yet."
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authelia-invite
+  namespace: authelia
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/instance: authelia
+    app.kubernetes.io/name: authelia
+  ports:
+    - name: invite
+      port: 8080
+      targetPort: invite
+      nodePort: 30092

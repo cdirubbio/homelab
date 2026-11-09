@@ -24,6 +24,38 @@ spec:
       strategy:
         type: Recreate
 
+      # Sidecar that serves only /config/notification.txt (the filesystem
+      # notifier's latest email: invites, password resets) for invite.dirubbio.com.
+      # Exposed by the authelia-invite Service in invite-viewer.yaml.
+      extraContainers:
+        - name: invite-viewer
+          image: busybox:1.37
+          command: [httpd, -f, -p, "8080", -h, /www]
+          ports:
+            - name: invite
+              containerPort: 8080
+          securityContext:
+            runAsUser: 0   # Authelia writes notification.txt as root, mode 0600
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: { cpu: 5m, memory: 8Mi }
+            limits: { memory: 32Mi }
+          volumeMounts:
+            - name: authelia
+              mountPath: /config
+              readOnly: true
+            - name: invite-viewer
+              mountPath: /www/cgi-bin
+              readOnly: true
+      extraVolumes:
+        - name: invite-viewer
+          configMap:
+            name: authelia-invite-viewer
+            defaultMode: 0555
+
     service:
       type: NodePort
       nodePort: 30091
