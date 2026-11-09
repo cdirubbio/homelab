@@ -65,7 +65,7 @@ spec:
       value: $(params.revision)
     - name: REPO_URL
       value: $(params.repo-url)
-    image: alpine:3.20
+    image: alpine:3.22
     name: clone
     script: |
       #!/bin/sh
@@ -73,7 +73,8 @@ spec:
       case "$REVISION" in
         *[!0-9a-f]*|"") echo "refusing to build non-SHA revision: $REVISION"; exit 1 ;;
       esac
-      apk add --no-cache -q git openssh-client
+      apk add --no-cache -q git openssh-client ca-certificates
+      cp /etc/ssl/certs/ca-certificates.crt /ca-certs/ca-certificates.crt
       # Pinned GitHub host key (https://api.github.com/meta).
       echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > /tmp/known_hosts
       export GIT_SSH_COMMAND="ssh -i /etc/deploy-key/ssh-privatekey -o IdentitiesOnly=yes -o UserKnownHostsFile=/tmp/known_hosts -o StrictHostKeyChecking=yes"
@@ -88,6 +89,8 @@ spec:
     - mountPath: /etc/deploy-key
       name: deploy-key
       readOnly: true
+    - mountPath: /ca-certs
+      name: ca-certs
   - args:
     - --context=dir:///src
     - --dockerfile=/src/Dockerfile
@@ -115,9 +118,14 @@ spec:
     - mountPath: /kaniko/.docker
       name: harbor-push
       readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
+      readOnly: true
   volumes:
   - emptyDir: {}
     name: src
+  - emptyDir: {}
+    name: ca-certs
   - name: deploy-key
     secret:
       defaultMode: 256
