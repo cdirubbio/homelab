@@ -12,5 +12,5 @@ spec:
   pruner:
     disabled: false
     resources: [taskrun, pipelinerun]
-    keep: 20
-    schedule: "0 4 * * *"
+    keep-since: 1440
+    schedule: "0 * * * *" 
