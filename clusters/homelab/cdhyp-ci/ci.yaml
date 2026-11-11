@@ -108,7 +108,7 @@ spec:
     env:
     - name: DOCKER_CONFIG
       value: /kaniko/.docker
-    image: gcr.io/kaniko-project/executor:v1.23.2
+    image: harbor.chrdir.com/harborian/kaniko/executor:v1.25.22
     name: build-push
     volumeMounts:
     - mountPath: /src
