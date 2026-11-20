@@ -20,6 +20,9 @@ spec:
   values: 
     longhornUI:
       replicas: 1
+    persistence:
+      defaultClassReplicaCount: 2
     defaultSettings:
+      defaultReplicaCount: '{"v1":"2","v2":"2"}'
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
       concurrentAutomaticEngineUpgradePerNodeLimit: 1
