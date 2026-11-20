@@ -8,14 +8,130 @@ metadata:
   namespace: authelia
 data:
   # busybox httpd runs /cgi-bin/index.cgi for "/" when there's no index.html.
+  # Renders the notification as a styled HTML page. Content is HTML-escaped
+  # and URLs are turned into links; the CSP blocks everything but inline CSS.
   index.cgi: |
     #!/bin/sh
-    printf 'Content-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nX-Robots-Tag: noindex\r\n\r\n'
-    if [ -s /config/notification.txt ]; then
-      cat /config/notification.txt
+    F="${NOTIFICATION_FILE:-/config/notification.txt}"
+    printf 'Content-Type: text/html; charset=utf-8\r\n'
+    printf 'Cache-Control: no-store\r\nX-Robots-Tag: noindex\r\nReferrer-Policy: no-referrer\r\n'
+    printf "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\n\r\n"
+    cat <<'HTML'
+    <!doctype html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Invite Viewer</title>
+    <style>
+    :root {
+      --bg: #f4f5f7; --card: #ffffff; --text: #1d2129; --muted: #5f6672;
+      --border: #e1e4e8; --accent: #2f6fde; --accent-text: #ffffff; --code: #f6f8fa;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317; --card: #1a1d23; --text: #e6e8eb; --muted: #9aa1ab;
+        --border: #2c3038; --accent: #6b9cf5; --accent-text: #0d1117; --code: #14161b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 48px 16px;
+    }
+    main { max-width: 680px; margin: 0 auto; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    h1 { font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    dl {
+      display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px;
+      margin: 0; padding: 18px 22px; border-bottom: 1px solid var(--border);
+    }
+    dt { color: var(--muted); font-size: 13px; }
+    dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+    .subject dd { font-weight: 600; }
+    .body {
+      padding: 22px; white-space: pre-wrap; overflow-wrap: anywhere;
+      font-size: 14.5px;
+    }
+    a { color: var(--accent); }
+    .body a.primary {
+      display: inline-block; margin: 6px 0; padding: 8px 14px; border-radius: 8px;
+      background: var(--accent); color: var(--accent-text); text-decoration: none;
+      font-weight: 600; white-space: normal;
+    }
+    .empty { padding: 40px 22px; text-align: center; color: var(--muted); }
+    footer { margin-top: 16px; font-size: 12px; color: var(--muted); text-align: center; }
+    @media (max-width: 480px) {
+      body { padding: 24px 16px; }
+      dl { grid-template-columns: 1fr; gap: 0; }
+      dd { margin-bottom: 8px; }
+    }
+    </style>
+    </head>
+    <body>
+    <main>
+    <header><span class="dot"></span><h1>Latest notification</h1></header>
+    <div class="card">
+    HTML
+    if [ -s "$F" ]; then
+      awk '
+        function esc(s) {
+          gsub(/&/, "\\&amp;", s); gsub(/</, "\\&lt;", s)
+          gsub(/>/, "\\&gt;", s); gsub(/"/, "\\&quot;", s)
+          return s
+        }
+        function linkify(s,   out, u, cls) {
+          out = ""
+          while (match(s, /https?:\/\/[^ \t<>"]+/)) {
+            u = substr(s, RSTART, RLENGTH)
+            cls = (linked++ == 0) ? " class=\"primary\"" : ""
+            out = out substr(s, 1, RSTART - 1) "<a" cls " href=\"" u "\" rel=\"noreferrer\">" u "</a>"
+            s = substr(s, RSTART + RLENGTH)
+          }
+          return out s
+        }
+        !inbody && /^Body:/ {
+          inbody = 1; sub(/^Body:[ \t]*/, "")
+          if (meta) print "</dl>"
+          printf "<div class=\"body\">"
+          if ($0 != "") print linkify(esc($0))
+          next
+        }
+        !inbody && match($0, /^[A-Za-z-]+:[ \t]/) {
+          k = substr($0, 1, RLENGTH - 2); v = substr($0, RLENGTH + 1)
+          if (!meta++) print "<dl>"
+          printf "<div class=\"%s\" style=\"display:contents\"><dt>%s</dt><dd>%s</dd></div>\n", tolower(k), esc(k), esc(v)
+          next
+        }
+        !inbody {
+          inbody = 1
+          if (meta) print "</dl>"
+          printf "<div class=\"body\">"
+        }
+        { print linkify(esc($0)) }
+        END {
+          if (!inbody && meta) print "</dl>"
+          if (inbody) print "</div>"
+        }
+      ' "$F"
     else
-      echo "No notifications yet."
+      echo '<div class="empty">No notifications yet.</div>'
     fi
+    cat <<'HTML'
+    </div>
+    <footer>Shows the most recent message from Authelia. Refresh after sending a new invite.</footer>
+    </main>
+    </body>
+    </html>
+    HTML
 ---
 apiVersion: v1
 kind: Service
