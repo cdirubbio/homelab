@@ -11,7 +11,11 @@ data:
   index.cgi: |
     #!/bin/sh
     printf 'Content-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nX-Robots-Tag: noindex\r\n\r\n'
-    cat /config/notification.txt 2>/dev/null || echo "No notifications yet."
+    if [ -s /config/notification.txt ]; then
+      cat /config/notification.txt
+    else
+      echo "No notifications yet."
+    fi
 ---
 apiVersion: v1
 kind: Service

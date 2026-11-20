@@ -85,6 +85,9 @@ spec:
           path: /config/db.sqlite3
 
       notifier:
+        # The startup check truncates notification.txt on every restart, which
+        # blanked invite.dirubbio.com after reboots.
+        disable_startup_check: true
         filesystem:
           enabled: true
           filename: /config/notification.txt
