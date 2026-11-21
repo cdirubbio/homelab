@@ -108,6 +108,10 @@ data:
                         url: https://glance.dirubbio.com
                         icon: si:glance
 
+                      - title: cdhyp
+                        url: https://cdhyp.dirubbio.com
+                        icon: mdi:web
+
               - type: group
                 widgets:
                   - type: hacker-news

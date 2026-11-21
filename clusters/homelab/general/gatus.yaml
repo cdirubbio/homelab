@@ -30,7 +30,6 @@ spec:
         - name: gatus-config
           configMap:
             name: gatus-config
-            namespace: default
 ---
 apiVersion: v1
 kind: Service
@@ -137,4 +136,18 @@ data:
         interval: 60s
         conditions:
           - "[STATUS] == 200"
+
+      - name: cdhyp
+        group: Applications
+        url: http://cdhyp.cdhyp.svc.cluster.local/readyz
+        interval: 60s
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: cdhyp Postgres
+        group: Applications
+        url: tcp://postgres.cdhyp.svc.cluster.local:5432
+        interval: 60s
+        conditions:
+          - "[CONNECTED] == true"
 ---
