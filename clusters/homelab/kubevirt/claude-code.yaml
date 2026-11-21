@@ -70,6 +70,7 @@ spec:
             userData: |
               #cloud-config
               hostname: claude-code
+              manage_etc_hosts: true
               groups: [docker]
               users:
                 - name: ubuntu

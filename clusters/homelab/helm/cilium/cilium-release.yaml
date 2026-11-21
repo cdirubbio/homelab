@@ -21,5 +21,8 @@ spec:
     operator:
       replicas: 1
     kubeProxyReplacement: true
+    # KubeVirt: VM traffic isn't a pod socket, so ClusterIPs must be translated per-packet
+    socketLB:
+      hostNamespaceOnly: true
     l2announcements:
       enabled: true
