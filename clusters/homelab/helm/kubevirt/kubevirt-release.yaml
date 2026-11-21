@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kubevirt-operator
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: kubevirt
+  chart:
+    spec:
+      chart: kubevirt-operator
+      version: "1.10.0"
+      sourceRef:
+        kind: HelmRepository
+        name: kubevirt
+        namespace: flux-system
+  install:
+    crds: Create
+    remediation:
+      remediateLastFailure: false
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      remediateLastFailure: false
+  driftDetection:
+    mode: enabled
+  postRenderers:
+  - kustomize:
+      patches:
+      - target:
+          kind: Namespace
+          name: kubevirt
+        patch: |
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: kubevirt
+            annotations:
+              helm.sh/resource-policy: keep
