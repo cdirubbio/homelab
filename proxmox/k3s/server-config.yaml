@@ -1,0 +1,15 @@
+
+flannel-backend: none
+disable-network-policy: true
+disable-kube-proxy: true
+disable:
+  - metrics-server
+  - servicelb
+  - traefik
+kube-apiserver-arg:
+  - "oidc-issuer-url=https://auth.dirubbio.com"
+  - "oidc-client-id=headlamp"
+  - "oidc-username-claim=preferred_username"
+  - "oidc-username-prefix=oidc:"
+  - "oidc-groups-claim=groups"
+  - "oidc-groups-prefix=oidc:"
