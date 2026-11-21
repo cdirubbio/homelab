@@ -107,7 +107,10 @@ spec:
                 - [sh, -c, "echo 'LABEL=work /work ext4 defaults,nofail 0 2' >> /etc/fstab"]
                 - [sh, -c, "echo '/dev/disk/by-id/virtio-claudeenv /mnt/claude-env iso9660 ro,nofail 0 0' >> /etc/fstab"]
                 - mount -a
-                - mkdir -p /work/docker /work/claude-config /work/projects
+                - mkdir -p /work/docker /work/containerd /work/claude-config /work/projects /var/lib/containerd
+                # docker's containerd image store ignores data-root; keep it on the big disk too
+                - [sh, -c, "echo '/work/containerd /var/lib/containerd none bind,nofail,x-systemd.requires-mounts-for=/work 0 0' >> /etc/fstab"]
+                - mount /var/lib/containerd
                 - chown -R ubuntu:ubuntu /work/projects
                 - [sh, -c, "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io"]
                 - systemctl enable --now docker
