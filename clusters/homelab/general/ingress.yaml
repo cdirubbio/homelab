@@ -1,0 +1,55 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: chrdir-cert
+  namespace: default
+spec:
+  secretName: chrdir-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  dnsNames:
+    - chat.chrdir.com
+    - owncloud.chrdir.com
+    - docs.chrdir.com
+    - code.chrdir.com
+    - gatus.chrdir.com
+    - actual.chrdir.com
+    - pve.chrdir.com
+    - grafana.chrdir.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: general
+  namespace: default
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - gatus.chrdir.com
+        - owncloud.chrdir.com
+      secretName: chrdir-tls
+  rules:
+    - host: gatus.chrdir.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gatus
+                port:
+                  number: 8080
+    - host: owncloud.chrdir.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: owncloud
+                port:
+                  number: 80
+---
